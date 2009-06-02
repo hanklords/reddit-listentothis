@@ -43,76 +43,152 @@ class LastFMmp3
   end
 end
 
-def youtube_url(title, name, url)
-  mp3_filename = "#{name}.mp3"
-  mp3 = "#{ROOT_FOLDER}/#{mp3_filename}"
+class Item
+  class UnknownSource < StandardError; end
+  def self.create(rss_node)
+    content = rss_node.at('description').content
+    d = Nokogiri::HTML(CGI.unescape(content))
+    url = nil
+    d.search('a').each {|a|
+      next if not a.content == '[link]'
+      url = URI.escape(a['href'])
+      break
+    }
 
-  if not File.exist? mp3
-    yt = YoutubeVideo.new(url)
-    flv = "#{Dir.tmpdir}/#{yt.video_id}.flv"
-    open(flv, "wb") {|f| f.write open(yt.flv_url, "rb").read}
-    system(TRANSCODE % [flv, mp3])
-    FileUtils.rm flv
+    klass = case url
+      when /\.mp3$/
+        MP3Item
+      when /youtube.com/
+        YoutubeItem
+      when /jamendo.com.*album/
+        JamendoAlbumItem
+      when /last\.?fm/
+        LastFMItem
+      else
+        raise UnknownSource.new(url)
+    end
+
+    klass.new(rss_node, url)
   end
 
-  "#EXTINF:-1,#{title}\n#{ROOT_SITE}/#{mp3_filename}"
+  attr_reader :name
+  def initialize(rss_node, url)
+    @rss_node = rss_node
+    @url = url
+    @title = rss_node.at('title').content
+    @name  = rss_node.at('guid').content.split('/').last
+  end
+
+  def to_m3u
+    "#EXTINF:-1,#@title\n#@url\n"
+  end
+
+  def to_rss
+    rss = @rss_node.dup
+    rss.at('guid').content = "#{ROOT_SITE}/#@name"
+    rss << Nokogiri.make("<enclosure url=\"#@url\" type=\"audio/mpeg\" />")
+    rss.to_s
+  end
 end
 
-def lastfm_url(title, name, url)
-  mp3_filename = "#{name}.mp3"
-  mp3 = "#{ROOT_FOLDER}/#{mp3_filename}"
+class YoutubeItem < Item
+  def initialize(*args)
+    super(*args)
+    @orig_url = @url
+    @mp3_filename = "#{@name}.mp3"
+    @url = "#{ROOT_SITE}/#{@mp3_filename}"
+    mp3 = "#{ROOT_FOLDER}/#{@mp3_filename}"
 
-  if not File.exist? mp3
-    yt = LastFMmp3.new(url)
-    open(mp3, "wb") {|f|
-      f.write open(yt.mp3_url, "rb", {'Cookie' => "AnonSession=#{yt.cookie};"}).read
+    if not File.exist? mp3
+      yt = YoutubeVideo.new(@orig_url)
+      flv = "#{Dir.tmpdir}/#{yt.video_id}.flv"
+      open(flv, "wb") {|f| f.write open(yt.flv_url, "rb").read}
+      system(TRANSCODE % [flv, mp3])
+      FileUtils.rm flv
+    end
+  end
+end
+
+class LastFMItem < Item
+  def initialize(*args)
+    super(*args)
+    @orig_url = @url
+    @mp3_filename = "#{@name}.mp3"
+    @url = "#{ROOT_SITE}/#{@mp3_filename}"
+    mp3 = "#{ROOT_FOLDER}/#{@mp3_filename}"
+
+    if not File.exist? mp3
+      lfm = LastFMmp3.new(@orig_url)
+      open(mp3, "wb") {|f|
+        f.write open(lfm.mp3_url, "rb", {'Cookie' => "AnonSession=#{lfm.cookie};"}).read
+      }
+    end
+  end
+end
+
+class JamendoAlbumItem < Item
+  Plain="http://api.jamendo.com/get2/stream/track/plain/?album_id=%s&order=numalbum_asc"
+  def initialize(*args)
+    super(*args)
+    @orig_url = @url
+    @id = @orig_url[/album\/(\d+)/, 1]
+    @m3u_url = "http://api.jamendo.com/get2/stream/track/m3u/?album_id=#{@id}&order=numalbum_asc"
+  end
+
+  def to_m3u
+    open(@m3u_url).read.sub(/^#EXTM3U$/, '')
+  end
+
+  def to_rss
+    open(Plain % [@id]).readlines.collect {|line|
+      @rss_node.dup << Nokogiri.make("<enclosure url=\"#{line}\" type=\"audio/mpeg\" />")
+    }.join
+  end
+end
+
+class MP3Item < Item
+end
+
+class Playlist
+  def initialize(rss_file)
+    @playlist = []
+
+    @doc = Nokogiri.parse(open(rss_file))
+    @doc.search('rss channel item').each { |rss_item|
+      begin
+        item = Item.create(rss_item)
+      rescue OpenURI::HTTPError, Item::UnknownSource => e
+        p e
+        next
+      end
+      @playlist << item
     }
   end
 
-  "#EXTINF:-1,#{title}\n#{ROOT_SITE}/#{mp3_filename}"
-end
+  def to_m3u
+    "#EXTM3U\n" + @playlist.collect {|i| i.to_m3u }.join
+  end
 
-def jamendo_album_url(url)
-  id = url[/album\/(\d+)/, 1]
-  pl_url = "http://api.jamendo.com/get2/stream/track/m3u/?album_id=#{id}&order=numalbum_asc"
-  open(pl_url).read.sub(/^#EXTM3U$/, '')
+  def to_rss
+    rss = @doc.dup
+    rss.search('item').each {|rss_item| rss_item.remove }
+    @playlist.each {|i| rss.at('channel') << Nokogiri.make(i.to_rss)  }
+    rss.to_s
+  end
+
+  def to_a; @playlist end
 end
 
 FileUtils.mkdir_p ROOT_FOLDER
-playlist = open("#{Dir.tmpdir}/playlist.m3u", "w")
-doc = Nokogiri.parse(open('http://www.reddit.com/r/listentothis/new.rss?sort=new'))
-names = []
 
-playlist.puts "#EXTM3U"
-doc.search('rss channel item').each { |item|
-  content = item.at('description').content
-  d = Nokogiri::HTML(CGI.unescape(content))
-  d.search('a').each {|a|
-    next if not a.content == '[link]'
-    url = URI.escape(a['href'])
-    title = item.at('title').content
-    name = item.at('guid').content.split('/').last
-    names << name
+items = Playlist.new('http://www.reddit.com/r/listentothis/new.rss?sort=new')
+names = items.to_a.collect {|item| item.name }
 
-    begin
-      if url =~ /\.mp3$/
-        playlist.puts "#EXTINF:-1,#{title}"
-        playlist.puts url
-      elsif url =~ /youtube.com/
-        playlist.puts youtube_url(title, name, url)
-      elsif url =~ /jamendo.com.*album/
-        playlist.puts jamendo_album_url(url)
-      elsif url =~ /last\.?fm/
-        playlist.puts lastfm_url(title, name, url)
-      end
-    rescue OpenURI::HTTPError
-      next
-    end
-  }
-}
-
-playlist.close
+open("#{Dir.tmpdir}/playlist.m3u", "w") {|m3u| m3u.write items.to_m3u }
 FileUtils.mv "#{Dir.tmpdir}/playlist.m3u", "#{ROOT_FOLDER}/playlist.m3u"
+
+open("#{Dir.tmpdir}/playlist.rss", "w") {|rss| rss.write items.to_rss }
+FileUtils.mv "#{Dir.tmpdir}/playlist.rss", "#{ROOT_FOLDER}/playlist.rss"
 
 # Clean folder
 Dir.glob("#{ROOT_FOLDER}/*.mp3").each { |file|
