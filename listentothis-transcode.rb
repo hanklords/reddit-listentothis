@@ -14,20 +14,22 @@ ROOT_FOLDER="#{ENV['HOME']}/www/listentothis"
 class YoutubeVideo
   FLV="http://www.youtube.com/get_video?video_id=%s&t=%s&el=detailpage&ps="
 
-  attr_reader :video_id, :t, :flv_url
+  attr_reader :video_id, :t, :media_url
   def initialize(url)
     youtube_page = Nokogiri.parse(open(url))
     scripts = youtube_page.search('script').text
     @t = scripts[/"t": *"([^\"]+)"/, 1]
     @video_id = scripts[/"video_id": *"([^\"]+)"/, 1]
-    @flv_url = FLV % [video_id, t]
+    @media_url = FLV % [video_id, t]
   end
+
+  def media_io; open(@media_url) end
 end
 
 class LastFMmp3
   PL="http://ws.audioscrobbler.com/2.0/?method=playlist.fetch&api_key=da6ae1e99462ee22e81ac91ed39b43a4&playlistURL=lastfm://playlist/track/%s&streaming=true"
 
-  attr_reader :id, :mp3_url, :cookie
+  attr_reader :id, :media_url, :cookie
   def initialize(url)
     lastfm_page = Nokogiri.parse(open(URI.parse(url)))
     scripts = lastfm_page.search('script').text
@@ -36,10 +38,14 @@ class LastFMmp3
     r = Net::HTTP.get_response(URI.parse(playlist_url))
     @cookie = r['Set-Cookie'][/AnonSession=([\w\d]+);/,1]
     playlist = Nokogiri.parse(r.body)
-    @mp3_url = playlist.at('freeTrackURL', playlist.root.collect_namespaces).text
-    if @mp3_url.empty?
-      @mp3_url = playlist.at('location', playlist.root.collect_namespaces).text
+    @media_url = playlist.at('freeTrackURL', playlist.root.collect_namespaces).text
+    if @media_url.empty?
+      @media_url = playlist.at('location', playlist.root.collect_namespaces).text
     end
+  end
+
+  def media_io
+    open(@media_url, "rb", {'Cookie' => "AnonSession=#@cookie;"})
   end
 end
 
@@ -77,6 +83,7 @@ class Item
     @url = url
     @title = rss_node.at('title').content
     @name  = rss_node.at('guid').content.split('/').last
+    puts @name
   end
 
   def to_m3u
@@ -86,7 +93,7 @@ class Item
   def to_rss
     rss = @rss_node.dup
     rss.at('guid').content = "#{ROOT_SITE}/#@name"
-    rss << Nokogiri.make("<enclosure url=\"#@url\" type=\"audio/mpeg\" />")
+    rss << Nokogiri::XML.fragment("<enclosure url=\"#@url\" type=\"audio/mpeg\" />")
     rss.to_s
   end
 end
@@ -102,7 +109,7 @@ class YoutubeItem < Item
     if not File.exist? mp3
       yt = YoutubeVideo.new(@orig_url)
       flv = "#{Dir.tmpdir}/#{yt.video_id}.flv"
-      open(flv, "wb") {|f| f.write open(yt.flv_url, "rb").read}
+      open(flv, "wb") {|f| f.write yt.media_io.read}
       system(TRANSCODE % [flv, mp3])
       FileUtils.rm flv
     end
@@ -120,7 +127,7 @@ class LastFMItem < Item
     if not File.exist? mp3
       lfm = LastFMmp3.new(@orig_url)
       open(mp3, "wb") {|f|
-        f.write open(lfm.mp3_url, "rb", {'Cookie' => "AnonSession=#{lfm.cookie};"}).read
+        f.write lfm.media_io.read
       }
     end
   end
@@ -141,7 +148,7 @@ class JamendoAlbumItem < Item
 
   def to_rss
     open(Plain % [@id]).readlines.collect {|line|
-      @rss_node.dup << Nokogiri.make("<enclosure url=\"#{line}\" type=\"audio/mpeg\" />")
+      @rss_node.dup << Nokogiri::XML.fragment("<enclosure url=\"#{line}\" type=\"audio/mpeg\" />")
     }.join
   end
 end
@@ -172,7 +179,7 @@ class Playlist
   def to_rss
     rss = @doc.dup
     rss.search('item').each {|rss_item| rss_item.remove }
-    @playlist.each {|i| rss.at('channel') << Nokogiri.make(i.to_rss)  }
+    @playlist.each {|i| rss.at('channel') << Nokogiri::XML.fragment(i.to_rss)  }
     rss.to_s
   end
 
