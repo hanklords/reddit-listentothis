@@ -83,7 +83,6 @@ class Item
     @url = url
     @title = rss_node.at('title').content
     @name  = rss_node.at('guid').content.split('/').last
-    puts @name
   end
 
   def to_m3u
@@ -93,8 +92,11 @@ class Item
   def to_rss
     rss = @rss_node.dup
     rss.at('guid').content = "#{ROOT_SITE}/#@name"
-    rss << Nokogiri::XML.fragment("<enclosure url=\"#@url\" type=\"audio/mpeg\" />")
-    rss.to_s
+    enclosure = Nokogiri::XML::Node.new('enclosure', rss.document)
+    enclosure['url'] = @url
+    enclosure['type'] = "audio/mpeg"
+    rss << enclosure
+    rss
   end
 end
 
@@ -147,9 +149,14 @@ class JamendoAlbumItem < Item
   end
 
   def to_rss
-    open(Plain % [@id]).readlines.collect {|line|
-      @rss_node.dup << Nokogiri::XML.fragment("<enclosure url=\"#{line}\" type=\"audio/mpeg\" />")
-    }.join
+    items = open(Plain % [@id]).readlines.collect {|line|
+      enclosure = Nokogiri::XML::Node.new('enclosure', rss.document)
+      enclosure['url'] = line
+      enclosure['type'] = "audio/mpeg"
+
+      @rss_node.dup << enclosure
+    }
+    Nokogiri::XML::NodeSet.new(rss.document, items)
   end
 end
 
@@ -179,7 +186,7 @@ class Playlist
   def to_rss
     rss = @doc.dup
     rss.search('item').each {|rss_item| rss_item.remove }
-    @playlist.each {|i| rss.at('channel') << Nokogiri::XML.fragment(i.to_rss)  }
+    @playlist.each {|i| rss.at('channel') << i.to_rss  }
     rss.to_s
   end
 
