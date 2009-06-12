@@ -6,6 +6,7 @@ require 'open-uri'
 require 'cgi'
 require 'tmpdir'
 require 'net/http'
+require 'time'
 
 TRANSCODE="ffmpeg -i \"%s\" -acodec libmp3lame -ac 2 -ab 128k -y \"%s\" 2> /dev/null"
 ROOT_SITE="http://yieu.eu/listentothis"
@@ -16,10 +17,9 @@ class YoutubeVideo
 
   attr_reader :video_id, :t, :media_url
   def initialize(url)
-    youtube_page = Nokogiri.parse(open(url))
-    scripts = youtube_page.search('script').text
-    @t = scripts[/"t": *"([^\"]+)"/, 1]
-    @video_id = scripts[/"video_id": *"([^\"]+)"/, 1]
+    youtube_page = open(url).read
+    @t = youtube_page[/"t": *"([^\"]+)"/, 1]
+    @video_id = youtube_page[/"video_id": *"([^\"]+)"/, 1]
     @media_url = FLV % [video_id, t]
   end
 
@@ -31,7 +31,7 @@ class LastFMmp3
 
   attr_reader :id, :media_url, :cookie
   def initialize(url)
-    lastfm_page = Nokogiri.parse(open(URI.parse(url)))
+    lastfm_page = Nokogiri::HTML.parse(open(URI.parse(url)))
     scripts = lastfm_page.search('script').text
     @id = scripts[/"id":"(\d+)"/, 1]
     playlist_url = PL % [@id]
@@ -91,6 +91,7 @@ class Item
 
   def to_rss
     rss = @rss_node.dup
+    rss.at('pubDate').content = Time.parse(rss.at('pubDate').content).rfc822
     rss.at('guid').content = "#{ROOT_SITE}/#@name"
     enclosure = Nokogiri::XML::Node.new('enclosure', rss.document)
     enclosure['url'] = @url
