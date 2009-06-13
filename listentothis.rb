@@ -8,7 +8,7 @@ require 'tmpdir'
 require 'net/http'
 require 'time'
 
-TRANSCODE="ffmpeg -i \"%s\" -acodec libmp3lame -ac 2 -ab 128k -y \"%s\" 2> /dev/null"
+TRANSCODE="ffmpeg -i \"%s\" -vn -acodec vorbis -ac 2 -ab 192k -y \"%s\" 2> /dev/null"
 ROOT_SITE="http://yieu.eu/listentothis"
 ROOT_FOLDER="#{ENV['HOME']}/www/listentothis"
 
@@ -77,7 +77,7 @@ class Item
     klass.new(rss_node, url)
   end
 
-  attr_reader :name
+  attr_reader :name, :url
   def initialize(rss_node, url)
     @rss_node = rss_node
     @url = url
@@ -92,10 +92,10 @@ class Item
   def to_rss
     rss = @rss_node.dup
     rss.at('pubDate').content = Time.parse(rss.at('pubDate').content).rfc822
-    rss.at('guid').content = "#{ROOT_SITE}/#@name"
+    rss.at('guid').content = @url
     enclosure = Nokogiri::XML::Node.new('enclosure', rss.document)
     enclosure['url'] = @url
-    enclosure['type'] = "audio/mpeg"
+    enclosure['type'] = "audio/ogg"
     rss << enclosure
     rss
   end
@@ -105,7 +105,7 @@ class YoutubeItem < Item
   def initialize(*args)
     super(*args)
     @orig_url = @url
-    @mp3_filename = "#{@name}.mp3"
+    @mp3_filename = "#{@name}.ogg"
     @url = "#{ROOT_SITE}/#{@mp3_filename}"
     mp3 = "#{ROOT_FOLDER}/#{@mp3_filename}"
 
@@ -123,7 +123,7 @@ class LastFMItem < Item
   def initialize(*args)
     super(*args)
     @orig_url = @url
-    @mp3_filename = "#{@name}.mp3"
+    @mp3_filename = "#{@name}.ogg"
     @url = "#{ROOT_SITE}/#{@mp3_filename}"
     mp3 = "#{ROOT_FOLDER}/#{@mp3_filename}"
 
@@ -172,6 +172,7 @@ class Playlist
     @doc.search('rss channel item').each { |rss_item|
       begin
         item = Item.create(rss_item)
+        puts item.url
       rescue OpenURI::HTTPError, Item::UnknownSource => e
         p e
         next
