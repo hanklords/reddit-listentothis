@@ -116,7 +116,7 @@ class YoutubeItem < Item
       flv = "#{Dir.tmpdir}/#{yt.video_id}.flv"
       open(flv, "wb") {|f| f.write yt.media_io.read}
       system(TRANSCODE % [flv, @file])
-      FileUtils.rm flv
+      FileUtils.rm flv, :force => true
     end
   end
 end
@@ -130,7 +130,7 @@ class LastFMItem < Item
       lfm = LastFMmp3.new(@source)
       open(mp3, "wb") {|f| f.write lfm.media_io.read }
       system(TRANSCODE % [mp3, @file])
-      FileUtils.rm mp3
+      FileUtils.rm mp3, :force => true
     end
   end
 end
@@ -167,7 +167,7 @@ class MP3Item < Item
       mp3 = "#{Dir.tmpdir}/#@name.mp3"
       open(mp3, "wb") {|f| f.write open(@source, "rb").read }
       system(TRANSCODE % [mp3, @file])
-      FileUtils.rm mp3
+      FileUtils.rm mp3, :force => true
     end
   end
 end
