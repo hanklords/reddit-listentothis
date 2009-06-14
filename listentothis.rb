@@ -7,6 +7,7 @@ require 'cgi'
 require 'tmpdir'
 require 'net/http'
 require 'time'
+require 'json'
 
 TRANSCODE="ffmpeg -i \"%s\" -vn -acodec vorbis -ac 2 -ab 192k -y \"%s\" 2> /dev/null"
 ROOT_SITE="http://yieu.eu/listentothis"
@@ -193,6 +194,7 @@ class Playlist
   end
 
   def to_a; @playlist end
+  def to_json; @playlist.collect {|i| i.url }.to_json end
 end
 
 FileUtils.mkdir_p ROOT_FOLDER
@@ -206,11 +208,11 @@ FileUtils.mv "#{Dir.tmpdir}/playlist.m3u", "#{ROOT_FOLDER}/playlist.m3u"
 open("#{Dir.tmpdir}/playlist.rss", "w") {|rss| rss.write items.to_rss }
 FileUtils.mv "#{Dir.tmpdir}/playlist.rss", "#{ROOT_FOLDER}/playlist.rss"
 
+open("#{Dir.tmpdir}/playlist.json", "w") {|json| json.write items.to_json }
+FileUtils.mv "#{Dir.tmpdir}/playlist.json", "#{ROOT_FOLDER}/playlist.json"
+
 # Clean folder
-Dir.glob("#{ROOT_FOLDER}/*.mp3").each { |file|
-  name = File.basename(file, '.mp3')
-  if not names.include? name
-    FileUtils.rm file ,:force => true
-  end
+Dir.glob("#{ROOT_FOLDER}/*.ogg").sort_by {|f| test(?M, f)}.reverse[50..-1].each{|f|
+  FileUtils.rm f ,:force => true
 }
 
