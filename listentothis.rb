@@ -63,6 +63,8 @@ class Item
     }
 
     klass = case url
+      when /\.ogg$/
+        OggItem
       when /\.mp3$/
         MP3Item
       when /youtube.com/
@@ -82,9 +84,10 @@ class Item
   def initialize(rss_node, url)
     @rss_node = rss_node
     @source = url
-    @url = @source
     @title = rss_node.at('title').content
     @name  = rss_node.at('guid').content.split('/').last
+    @url = "#{ROOT_SITE}/#@name.ogg"
+    @file = "#{ROOT_FOLDER}/#@name.ogg"
   end
 
   def to_m3u
@@ -98,6 +101,7 @@ class Item
     enclosure = Nokogiri::XML::Node.new('enclosure', rss.document)
     enclosure['url'] = @url
     enclosure['type'] = "audio/ogg"
+    enclosure['length'] = File.size(@file).to_s
     rss << enclosure
     rss
   end
@@ -106,15 +110,12 @@ end
 class YoutubeItem < Item
   def initialize(*args)
     super(*args)
-    @mp3_filename = "#{@name}.ogg"
-    @url = "#{ROOT_SITE}/#{@mp3_filename}"
-    mp3 = "#{ROOT_FOLDER}/#{@mp3_filename}"
 
-    if not File.exist? mp3
+    if not File.exist? @file
       yt = YoutubeVideo.new(@source)
       flv = "#{Dir.tmpdir}/#{yt.video_id}.flv"
       open(flv, "wb") {|f| f.write yt.media_io.read}
-      system(TRANSCODE % [flv, mp3])
+      system(TRANSCODE % [flv, @file])
       FileUtils.rm flv
     end
   end
@@ -123,15 +124,13 @@ end
 class LastFMItem < Item
   def initialize(*args)
     super(*args)
-    @mp3_filename = "#{@name}.ogg"
-    @url = "#{ROOT_SITE}/#{@mp3_filename}"
-    mp3 = "#{ROOT_FOLDER}/#{@mp3_filename}"
 
-    if not File.exist? mp3
+    if not File.exist? @file
+      mp3 = "#{Dir.tmpdir}/#@name.mp3"
       lfm = LastFMmp3.new(@source)
-      open(mp3, "wb") {|f|
-        f.write lfm.media_io.read
-      }
+      open(mp3, "wb") {|f| f.write lfm.media_io.read }
+      system(TRANSCODE % [mp3, @file])
+      FileUtils.rm mp3
     end
   end
 end
@@ -161,6 +160,19 @@ class JamendoAlbumItem < Item
 end
 
 class MP3Item < Item
+  def initialize(*args)
+    super *args
+
+    if not File.exist? @file
+      mp3 = "#{Dir.tmpdir}/#@name.mp3"
+      open(mp3, "wb") {|f| f.write open(@source, "rb").read }
+      system(TRANSCODE % [mp3, @file])
+      FileUtils.rm mp3
+    end
+  end
+end
+
+class OggItem < Item
 end
 
 class Playlist
@@ -170,8 +182,8 @@ class Playlist
     @doc = Nokogiri.parse(open(rss_file))
     @doc.search('rss channel item').each { |rss_item|
       begin
+        puts rss_item.at('title').content
         item = Item.create(rss_item)
-        puts item.url
       rescue OpenURI::HTTPError, Item::UnknownSource => e
         p e
         next
