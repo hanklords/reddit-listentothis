@@ -78,10 +78,11 @@ class Item
     klass.new(rss_node, url)
   end
 
-  attr_reader :name, :url
+  attr_reader :name, :url, :source
   def initialize(rss_node, url)
     @rss_node = rss_node
-    @url = url
+    @source = url
+    @url = @source
     @title = rss_node.at('title').content
     @name  = rss_node.at('guid').content.split('/').last
   end
@@ -105,13 +106,12 @@ end
 class YoutubeItem < Item
   def initialize(*args)
     super(*args)
-    @orig_url = @url
     @mp3_filename = "#{@name}.ogg"
     @url = "#{ROOT_SITE}/#{@mp3_filename}"
     mp3 = "#{ROOT_FOLDER}/#{@mp3_filename}"
 
     if not File.exist? mp3
-      yt = YoutubeVideo.new(@orig_url)
+      yt = YoutubeVideo.new(@source)
       flv = "#{Dir.tmpdir}/#{yt.video_id}.flv"
       open(flv, "wb") {|f| f.write yt.media_io.read}
       system(TRANSCODE % [flv, mp3])
@@ -123,13 +123,12 @@ end
 class LastFMItem < Item
   def initialize(*args)
     super(*args)
-    @orig_url = @url
     @mp3_filename = "#{@name}.ogg"
     @url = "#{ROOT_SITE}/#{@mp3_filename}"
     mp3 = "#{ROOT_FOLDER}/#{@mp3_filename}"
 
     if not File.exist? mp3
-      lfm = LastFMmp3.new(@orig_url)
+      lfm = LastFMmp3.new(@source)
       open(mp3, "wb") {|f|
         f.write lfm.media_io.read
       }
@@ -141,8 +140,7 @@ class JamendoAlbumItem < Item
   Plain="http://api.jamendo.com/get2/stream/track/plain/?album_id=%s&order=numalbum_asc"
   def initialize(*args)
     super(*args)
-    @orig_url = @url
-    @id = @orig_url[/album\/(\d+)/, 1]
+    @id = @source[/album\/(\d+)/, 1]
     @m3u_url = "http://api.jamendo.com/get2/stream/track/m3u/?album_id=#{@id}&order=numalbum_asc"
   end
 
