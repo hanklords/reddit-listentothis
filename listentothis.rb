@@ -34,14 +34,14 @@ class LastFMmp3
   def initialize(url)
     lastfm_page = Nokogiri::HTML.parse(open(URI.parse(url)))
     scripts = lastfm_page.search('script').text
-    @id = scripts[/"id":"(\d+)"/, 1]
+    @id = scripts[/"id":"?(\d+)"?/, 1]
     playlist_url = PL % [@id]
     r = Net::HTTP.get_response(URI.parse(playlist_url))
     @cookie = r['Set-Cookie'][/AnonSession=([\w\d]+);/,1]
     playlist = Nokogiri.parse(r.body)
-    @media_url = playlist.at('freeTrackURL', playlist.root.collect_namespaces).text
+    @media_url = playlist.search('freeTrackURL', playlist.root.collect_namespaces).text
     if @media_url.empty?
-      @media_url = playlist.at('location', playlist.root.collect_namespaces).text
+      @media_url = playlist.search('location', playlist.root.collect_namespaces).text
     end
   end
 
