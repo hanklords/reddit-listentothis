@@ -9,7 +9,7 @@ require 'net/http'
 require 'time'
 require 'json'
 
-TRANSCODE="ffmpeg -i \"%s\" -vn -acodec vorbis -ac 2 -ab 192k -y \"%s\" 2> /dev/null"
+TRANSCODE="ffmpeg -v -1 -i \"%s\" -vn -f wav - 2> /dev/null | oggenc -Q -o \"%s\" -"
 ROOT_SITE="http://yieu.eu/listentothis"
 ROOT_FOLDER="#{ENV['HOME']}/www/listentothis"
 
@@ -224,7 +224,8 @@ open("#{Dir.tmpdir}/playlist.json", "w") {|json|
 FileUtils.mv "#{Dir.tmpdir}/playlist.json", "#{ROOT_FOLDER}/playlist.json"
 
 # Clean folder
-Dir.glob("#{ROOT_FOLDER}/*.ogg").sort_by {|f| test(?M, f)}.reverse[50..-1].each{|f|
+Dir.glob("#{ROOT_FOLDER}/*.ogg").sort_by {|f| test(?M, f)}.reverse.each_with_index {|f, i|
+  next if i <= 50
   FileUtils.rm f ,:force => true
 }
 
