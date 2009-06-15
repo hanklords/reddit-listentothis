@@ -5,57 +5,73 @@
 // ==/UserScript==
 
 $(function() {
-  GM_addStyle(".listen {padding-left:0} .listening {background-color:#F8E0EC}");
+  GM_addStyle(".listen {padding-left:0} .next, .previous {color: #888888; font-weight: bold; padding:0px 1px;} .listening {background-color:#F8E0EC}")
 
-  var links = [];
-  $("div.link").each(function(i) {
-    var href = $("a.comments", this).attr("href").split("/");
-    var name = href[href.length - 2];
-    var link = "http://yieu.eu/listentothis/" + name + ".ogg";
-    links.push(link);
-    $("ul.buttons", this).append("<li><a class=\"ogglink\" href=\"" + link + "\">Direct link</a></li>");
-  });
-  
-  $(".side").prepend(
-    "<div class=\"spacer\"><div class=\"sidebox listen\">\
-    <audio controls=\"true\" src=\"" + links[0] + "\"></audio>\
-    <div class=\"subtitle\"><a href=\"#\" class=\"previous\">&lt;-</a> <a href=\"#\" class=\"next\">-&gt;</a></div>\
-    <div class=\"subtitle\"><a href=\"http://yieu.eu/listentothis/playlist.rss\">Podcast</a></div>\
-    <div class=\"subtitle\"><a href=\"http://yieu.eu/listentothis/playlist.m3u\">Playlist</a></div>\
-    </div></div>"
-  )
+  function setPlayer(links) {
+    $(".side").prepend(
+      "<div class=\"spacer\"><div class=\"sidebox listen\">\
+      <audio controls=\"true\" src=\"" + links[0] + "\"></audio>\
+      <div ><a href=\"#\" class=\"previous\">(prev)|&lt;-</a><a href=\"#\" class=\"next\">&gt;| (next)</a></div>\
+      <div class=\"subtitle\"><a href=\"http://yieu.eu/listentothis/playlist.rss\">Podcast</a></div>\
+      <div class=\"subtitle\"><a href=\"http://yieu.eu/listentothis/playlist.m3u\">Playlist</a></div>\
+      </div></div>"
+    )
 
-  $("audio").bind("play", function(event) {
-    $("div.link").removeClass("listening")
-    $("div.link:has(a[href=\"" + this.src + "\"])").addClass("listening")
-  })
+    function play(src) {
+      $("audio").attr("src", src)
+      $("audio")[0].load()
+      $("audio")[0].play()
+    }
 
-  $("audio").bind("error", function(event) {next() })
-  $("audio").bind("ended", function(event) {next() })
+    function previous() {
+      current = $.inArray($("audio").attr("src"), links)
+      if(current == 0) {
+        current = links.length
+      }
+      play(links[current - 1])
+    }
 
-  function previous(event) {
-    current = $.inArray($("audio").attr("src"), links)
-    $("audio").attr("src", links[current - 1])
-    $("audio").get(0).load()
-    $("audio").get(0).play()
+    function next() {
+      current = $.inArray($("audio").attr("src"), links)
+      if(current == links.length - 1) {
+        current = -1
+      }
+      play(links[current + 1])
+    }
+
+    //  $("audio").bind("error", function(event) {next() })
+    $("audio").bind("ended", function(event) {next()})
+    $("audio").bind("play", function(event) {
+      $("div.link").removeClass("listening")
+      $("div.link:has(a[href=\"" + this.src + "\"])").addClass("listening")
+    })
+
+    $(".previous").click(previous)
+    $(".next").click(next)
+    $(".previous, .next").click(function(event) {event.preventDefault()})
   }
 
-  function next(event) {
-    current = $.inArray($("audio").attr("src"), links)
-    $("audio").attr("src", links[current + 1])
-    $("audio").get(0).load()
-    $("audio").get(0).play()
-  }
+  GM_xmlhttpRequest({
+    method: "GET",
+    url: "http://yieu.eu/listentothis/playlist.json",
+    onload: function(r) {
+      var links = [];
+      known = $.map(eval(r.responseText), function(e) {return "http://yieu.eu/listentothis/" + e + ".ogg"})
 
-  $(".previous").click(function(event) {
-    previous()
-    event.preventDefault()
-  })
+      $("div.link").each(function(i) {
+        var href = $("a.comments", this).attr("href").split("/")
+        var name = href[href.length - 2]
+        var link = "http://yieu.eu/listentothis/" + name + ".ogg"
+        if($.inArray(link, known) != -1) {
+          links.push(link);
+          $("ul.buttons", this).append("<li><a class=\"ogglink\" href=\"" + link + "\">Download</a></li>")
+        }
+      })
 
-  $(".next").click(function(event) {
-    next()
-    event.preventDefault()
+      if(links.length > 0) {
+        setPlayer(links)
+      }
+    }
   })
-  
-});
+})
 
