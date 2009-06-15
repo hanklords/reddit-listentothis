@@ -204,7 +204,6 @@ class Playlist
   end
 
   def to_a; @playlist end
-  def to_json; @playlist.collect {|i| i.url }.to_json end
 end
 
 FileUtils.mkdir_p ROOT_FOLDER
@@ -218,7 +217,10 @@ FileUtils.mv "#{Dir.tmpdir}/playlist.m3u", "#{ROOT_FOLDER}/playlist.m3u"
 open("#{Dir.tmpdir}/playlist.rss", "w") {|rss| rss.write items.to_rss }
 FileUtils.mv "#{Dir.tmpdir}/playlist.rss", "#{ROOT_FOLDER}/playlist.rss"
 
-open("#{Dir.tmpdir}/playlist.json", "w") {|json| json.write items.to_json }
+open("#{Dir.tmpdir}/playlist.json", "w") {|json|
+  names = Dir.glob("#{ROOT_FOLDER}/*.ogg").collect {|f| File.basename(f, '.ogg')}
+  json.write names.to_json
+}
 FileUtils.mv "#{Dir.tmpdir}/playlist.json", "#{ROOT_FOLDER}/playlist.json"
 
 # Clean folder
