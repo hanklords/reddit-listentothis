@@ -23,7 +23,7 @@
 // @name           listentothis
 // @include        http://www.reddit.com/r/listentothis*
 // @description    Render /r/listentothis into a playlist.
-// @copyright 2009, Mael Clerambault <maelclerambault@yahoo.fr>
+// @copyright      2009, Mael Clerambault <maelclerambault@yahoo.fr>
 // @require        jquery.js
 // ==/UserScript==
 
