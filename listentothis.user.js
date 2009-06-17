@@ -28,72 +28,76 @@
 // ==/UserScript==
 
 $(function() {
+  site =  "http://yieu.eu/listentothis/"
+  audio = null
   GM_addStyle(".listen {padding-left:0} .next, .previous {color: #888888; font-weight: bold; padding:0px 1px;} .listening {background-color:#F8E0EC}")
 
   function setPlayer(links) {
     $(".side").prepend(
       "<div class=\"spacer\"><div class=\"sidebox listen\">\
       <audio controls=\"true\" src=\"" + links[0] + "\"></audio>\
-      <div ><a href=\"#\" class=\"previous\">(prev)|&lt;-</a><a href=\"#\" class=\"next\">&gt;| (next)</a></div>\
-      <div class=\"subtitle\"><a href=\"http://yieu.eu/listentothis/playlist.rss\">Podcast</a></div>\
-      <div class=\"subtitle\"><a href=\"http://yieu.eu/listentothis/playlist.m3u\">Playlist</a></div>\
+      <div><a href=\"#\" class=\"previous\">(prev) |&lt;</a><a href=\"#\" class=\"next\">&gt;| (next)</a></div>\
+      <div class=\"subtitle playing\">Playing:</div>\
+      <div class=\"subtitle\"><a href=\"" + site + "playlist.rss\">Podcast</a></div>\
+      <div class=\"subtitle\"><a href=\"" + site + "playlist.m3u\">Playlist</a></div>\
       </div></div>"
     )
-
-    function play(src) {
-      $("audio").attr("src", src)
-      $("audio")[0].load()
-      $("audio")[0].play()
+    audio = $("audio")[0]
+    audio.playlist = links
+    audio.orig_play = audio.play
+    audio.play = function(src) {
+      this.src = src
+      this.load()
+      this.orig_play()
     }
 
-    function previous() {
-      current = $.inArray($("audio").attr("src"), links)
-      if(current == 0) {
-        current = links.length
-      }
-      play(links[current - 1])
+    audio.previous = function() {
+      current = $.inArray(decodeURI(this.src), this.playlist)
+      if(current == 0) { current = this.playlist.length }
+      this.play(this.playlist[current - 1])
     }
 
-    function next() {
-      current = $.inArray($("audio").attr("src"), links)
-      if(current == links.length - 1) {
-        current = -1
-      }
-      play(links[current + 1])
+    audio.next = function() {
+      current = $.inArray(decodeURI(this.src), this.playlist)
+      if(current == this.playlist.length - 1) { current = -1 }
+      this.play(this.playlist[current + 1])
     }
 
-    //  $("audio").bind("error", function(event) {next() })
-    $("audio").bind("ended", function(event) {next()})
-    $("audio").bind("play", function(event) {
+    $("audio").bind("ended", function() {audio.next()})
+    $("audio").bind("play", function() {
       $("div.link").removeClass("listening")
-      $("div.link:has(a[href=\"" + this.src + "\"])").addClass("listening")
+      item = $("div.link:has(a[href='" + decodeURI(this.src) + "'])")
+      item.addClass("listening")
+      $("div.playing").text("Playing: " + $("a.title", item).text())
     })
 
-    $(".previous").click(previous)
-    $(".next").click(next)
+    $(".previous").click(function() {audio.previous() })
+    $(".next").click(function () {audio.next() })
     $(".previous, .next").click(function(event) {event.preventDefault()})
   }
 
   GM_xmlhttpRequest({
     method: "GET",
-    url: "http://yieu.eu/listentothis/playlist.json",
+    url: site + "playlist.json",
     onload: function(r) {
       var links = [];
-      known = $.map(eval(r.responseText), function(e) {return "http://yieu.eu/listentothis/" + e + ".ogg"})
+      known = $.map(eval(r.responseText), function(e) {return site + e + ".ogg"})
 
       $("div.link").each(function(i) {
         var href = $("a.comments", this).attr("href").split("/")
         var name = href[href.length - 2]
-        var link = "http://yieu.eu/listentothis/" + name + ".ogg"
+        var link = site + name + ".ogg"
         if($.inArray(link, known) != -1) {
           links.push(link);
-          $("ul.buttons", this).append("<li><a class=\"ogglink\" href=\"" + link + "\">Download</a></li>")
+          $("ul.buttons", this).append("<li><a class=\"ogglink\" href=\"" + link + "\">Play</a></li>")
         }
       })
 
-      if(links.length > 0) {
-        setPlayer(links)
-      }
+      if(links.length > 0) { setPlayer(links) }
+      $("a.ogglink").click(function(event) {
+        audio.play(this.href)
+        event.preventDefault()
+      })
     }
   })
 })
