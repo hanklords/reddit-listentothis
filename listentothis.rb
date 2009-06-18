@@ -33,6 +33,7 @@ require 'json'
 TRANSCODE="ffmpeg -v -1 -i \"%s\" -vn -f wav - 2> /dev/null | oggenc -Q -o \"%s\" -"
 ROOT_SITE="http://yieu.eu/listentothis"
 ROOT_FOLDER="#{ENV['HOME']}/www/listentothis"
+HISTORY_NUMBER=100
 
 class YoutubeVideo
   FLV="http://www.youtube.com/get_video?video_id=%s&t=%s&el=detailpage&ps="
@@ -246,7 +247,7 @@ FileUtils.mv "#{Dir.tmpdir}/playlist.json", "#{ROOT_FOLDER}/playlist.json"
 
 # Clean folder
 Dir.glob("#{ROOT_FOLDER}/*.ogg").sort_by {|f| test(?M, f)}.reverse.each_with_index {|f, i|
-  next if i <= 50
+  next if i <= HISTORY_NUMBER
   FileUtils.rm f ,:force => true
 }
 
