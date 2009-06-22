@@ -93,7 +93,7 @@ class Item
         YoutubeItem
       when /jamendo.com.*album/
         JamendoAlbumItem
-      when /last\.?fm/
+      when /last\.fm\//
         LastFMItem
       else
         raise UnknownSource.new(url)
@@ -195,6 +195,13 @@ class MP3Item < Item
 end
 
 class OggItem < Item
+  def initialize(*args)
+    super *args
+
+    if not File.exist? @file
+      open(@file, "wb") {|f| f.write open(@source, "rb").read }
+    end
+  end
 end
 
 class Playlist
