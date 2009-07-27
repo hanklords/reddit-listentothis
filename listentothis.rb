@@ -112,6 +112,8 @@ class Item
     @file = "#{ROOT_FOLDER}/#@name.ogg"
   end
 
+  def valid?; File.file? @file end
+
   def to_m3u
     "#EXTINF:-1,#@title\n#@url\n"
   end
@@ -148,8 +150,8 @@ class LastFMItem < Item
     super(*args)
 
     if not File.exist? @file
-      mp3 = "#{Dir.tmpdir}/#@name.mp3"
       lfm = LastFMmp3.new(@source)
+      mp3 = "#{Dir.tmpdir}/#{lfm.id}.mp3"
       open(mp3, "wb") {|f| f.write lfm.media_io.read }
       system(TRANSCODE % [mp3, @file])
       FileUtils.rm mp3, :force => true
@@ -217,7 +219,7 @@ class Playlist
         p e
         next
       end
-      @playlist << item
+      @playlist << item if item.valid?
     }
   end
 
