@@ -120,7 +120,7 @@ class Item
 
   def to_rss
     rss = @rss_node.dup
-    rss.at('pubdate').content = Time.parse(rss.at('pubdate').content).rfc822
+    rss.at('pubDate').content = Time.parse(rss.at('pubDate').content).rfc822
     rss.at('guid').content = @url
     enclosure = Nokogiri::XML::Node.new('enclosure', rss.document)
     enclosure['url'] = @url
@@ -210,7 +210,7 @@ class Playlist
   def initialize(rss_file)
     @playlist = []
 
-    @doc = Nokogiri.parse(open(rss_file))
+    @doc = Nokogiri::XML(open(rss_file))
     @doc.search('rss channel item').each { |rss_item|
       begin
         puts rss_item.at('title').content
