@@ -29,6 +29,7 @@ require 'tmpdir'
 require 'net/http'
 require 'time'
 require 'json'
+require 'ogginfo'
 
 TRANSCODE="ffmpeg -v -1 -i \"%s\" -vn -f wav - 2> /dev/null | oggenc -Q -o \"%s\" -"
 ROOT_SITE="http://yieu.eu/listentothis"
@@ -115,7 +116,8 @@ class Item
   def valid?; File.file? @file end
 
   def to_m3u
-    "#EXTINF:-1,#@title\n#@url\n"
+    length = OggInfo.open(@file) {|ogg| ogg.length.to_i}
+    "#EXTINF:#{length},#@title\n#@url\n"
   end
 
   def to_rss
