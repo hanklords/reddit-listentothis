@@ -1,0 +1,15 @@
+{
+  "name": "listentothis",
+  "version": "0.1",
+  "description": "Listen to listentothis",
+  "permissions": [ "http://yieu.eu/" ],
+  "background_page": "background.html",
+  "content_scripts": [
+    {
+      "matches": ["http://www.reddit.com/r/listentothis*"],
+      "css": ["listentothis.css"],
+      "js": ["jquery.js", "listentothis.user.js"]
+    }
+  ]
+}
+
