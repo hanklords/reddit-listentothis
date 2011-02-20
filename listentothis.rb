@@ -227,7 +227,7 @@ end
 
 FileUtils.mkdir_p ROOT_FOLDER
 
-items = Playlist.new('http://www.reddit.com/r/listentothis/new.rss?sort=new')
+items = Playlist.new("http://www.reddit.com/r/listentothis/new.rss?sort=new&limit=#{HISTORY_NUMBER}")
 names = items.to_a.collect {|item| item.name }
 
 open("#{Dir.tmpdir}/playlist.m3u", "w") {|m3u| m3u.write items.to_m3u }
