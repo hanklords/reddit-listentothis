@@ -36,20 +36,6 @@ ROOT_SITE="http://yieu.eu/listentothis"
 ROOT_FOLDER="#{ENV['HOME']}/www/listentothis"
 HISTORY_NUMBER=100
 
-class YoutubeVideo
-  FLV="http://www.youtube.com/get_video?video_id=%s&t=%s&el=detailpage&ps="
-
-  attr_reader :video_id, :t, :media_url
-  def initialize(url)
-    youtube_page = open(url).read
-    @t = youtube_page[/"t": *"([^\"]+)"/, 1]
-    @video_id = youtube_page[/"video_id": *"([^\"]+)"/, 1]
-    @media_url = FLV % [video_id, t]
-  end
-
-  def media_io; open(@media_url) end
-end
-
 class LastFMmp3
   PL="http://ws.audioscrobbler.com/2.0/?method=playlist.fetch&api_key=da6ae1e99462ee22e81ac91ed39b43a4&playlistURL=lastfm://playlist/track/%s&streaming=true"
 
@@ -134,15 +120,15 @@ class Item
 end
 
 class YoutubeItem < Item
+  YOUTUBE_DL="youtube-dl -qo \"%s\" \"%s\""
   def initialize(*args)
     super(*args)
 
     if not File.exist? @file
-      yt = YoutubeVideo.new(@source)
-      flv = "#{Dir.tmpdir}/#{yt.video_id}.flv"
-      open(flv, "wb") {|f| f.write yt.media_io.read}
-      system(TRANSCODE % [flv, @file])
-      FileUtils.rm flv, :force => true
+      video = "#{Dir.tmpdir}/youtube.video"
+      system(YOUTUBE_DL % [video, @source])
+      system(TRANSCODE % [video, @file])
+      FileUtils.rm video, :force => true
     end
   end
 end
