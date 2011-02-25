@@ -31,6 +31,8 @@ $(function() {
   site =  "http://yieu.eu/listentothis/"
   audio = null
   GM_addStyle(".listen {padding-left:0} .next, .previous {color: #888888; font-weight: bold; padding:0px 1px;} .listening {background-color:#F8E0EC}")
+  page_match = document.location.pathname.match(/\/r\/(\w+)/)
+  page = page_match[1]
 
   function setPlayer(links) {
     $(".side").prepend(
