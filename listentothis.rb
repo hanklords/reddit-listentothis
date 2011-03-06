@@ -105,6 +105,7 @@ class Item
     @file = "#{ROOT_FOLDER}/#@name.ogg"
   end
 
+  def process; true end
   def valid?; File.file? @file end
 
   def to_m3u
@@ -127,10 +128,8 @@ end
 
 class YoutubeItem < Item
   YOUTUBE_DL="youtube-dl -qo \"%s\" \"%s\""
-  def initialize(*args)
-    super(*args)
-
-    if not File.exist? @file
+  def process
+    if not valid?
       video = "#{Dir.tmpdir}/youtube.video"
       system(YOUTUBE_DL % [video, @source])
       system(TRANSCODE % [video, @file])
@@ -140,10 +139,8 @@ class YoutubeItem < Item
 end
 
 class SoundcloudItem < Item
-  def initialize(*args)
-    super(*args)
-
-    if not File.exist? @file
+  def process
+    if not valid?
       doc = Nokogiri::HTML.parse(open(@source))
       json_txt = doc.at("script:contains('bufferTracks.push')").text.sub("window.SC.bufferTracks.push(", "").sub(/\);$/, "")
       json = JSON.parse json_txt
@@ -157,10 +154,8 @@ class SoundcloudItem < Item
 end
 
 class LastFMItem < Item
-  def initialize(*args)
-    super(*args)
-
-    if not File.exist? @file
+  def process
+    if not valid?
       lfm = LastFMmp3.new(@source)
       mp3 = "#{Dir.tmpdir}/#{lfm.id}.mp3"
       open(mp3, "wb") {|f| f.write lfm.media_io.read }
@@ -195,10 +190,8 @@ class JamendoAlbumItem < Item
 end
 
 class MP3Item < Item
-  def initialize(*args)
-    super *args
-
-    if not File.exist? @file
+  def process
+    if not valid?
       mp3 = "#{Dir.tmpdir}/#@name.mp3"
       open(mp3, "wb") {|f| f.write open(@source, "rb").read }
       system(TRANSCODE % [mp3, @file])
@@ -208,10 +201,8 @@ class MP3Item < Item
 end
 
 class OggItem < Item
-  def initialize(*args)
-    super *args
-
-    if not File.exist? @file
+  def process
+    if not valid?
       open(@file, "wb") {|f| f.write open(@source, "rb").read }
     end
   end
@@ -220,18 +211,26 @@ end
 class Playlist
   def initialize(rss_file)
     @playlist = []
+    @items = []
 
     @doc = Nokogiri::XML(open(rss_file))
     @doc.search('rss channel item').each { |rss_item|
+      puts rss_item.at('title').content
       begin
-        puts rss_item.at('title').content
-        item = Item.create(rss_item)
-      rescue OpenURI::HTTPError, Item::UnknownSource => e
+        @items << Item.create(rss_item)
+      rescue Item::UnknownSource => e
         p e
         next
       end
-      @playlist << item if item.valid?
     }
+  end
+  
+  def process
+    @items.each_slice(5) do |items|
+      items.each {|item| fork {item.process} }
+      wait
+    end
+    @playlist = @items.select {|item| item.valid? }
   end
 
   def to_m3u
@@ -253,6 +252,7 @@ begin
 FileUtils.mkdir_p ROOT_FOLDER
 
 items = Playlist.new("http://www.reddit.com/r/listentothis/new.rss?sort=new&limit=#{HISTORY_NUMBER}")
+items.process
 
 open("#{ROOT_FOLDER}/playlist.m3u", "w") {|m3u| m3u.write items.to_m3u }
 open("#{ROOT_FOLDER}/playlist.rss", "w") {|rss| rss.write items.to_rss }
