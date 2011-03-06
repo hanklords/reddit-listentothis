@@ -33,7 +33,7 @@ require 'ogginfo'
 
 RUNFILE="#{Dir.tmpdir}/#{ENV['LOGNAME']}_listentothis"
 exit if File.exist?(RUNFILE)
-File.open(RUNFILE, "w") {}
+FileUtils.touch(RUNFILE)
 
 TRANSCODE="ffmpeg -v -1 -i \"%s\" -vn -f wav - 2> /dev/null | oggenc -Q -o \"%s\" -"
 ROOT_SITE="http://yieu.eu/listentothis"
