@@ -215,7 +215,6 @@ class Playlist
 
     @doc = Nokogiri::XML(open(rss_file))
     @doc.search('rss channel item').each { |rss_item|
-      puts rss_item.at('title').content
       begin
         @items << Item.create(rss_item)
       rescue Item::UnknownSource => e
@@ -227,8 +226,11 @@ class Playlist
   
   def process
     @items.each_slice(5) do |items|
-      items.each {|item| fork {item.process} }
-      wait
+      items.each {|item|
+        puts item.title
+        fork {item.process}
+      }
+      Process.wait
     end
     @playlist = @items.select {|item| item.valid? }
   end
