@@ -252,19 +252,13 @@ begin
 FileUtils.mkdir_p ROOT_FOLDER
 
 items = Playlist.new("http://www.reddit.com/r/listentothis/new.rss?sort=new&limit=#{HISTORY_NUMBER}")
-names = items.to_a.collect {|item| item.name }
 
-open("#{Dir.tmpdir}/playlist.m3u", "w") {|m3u| m3u.write items.to_m3u }
-FileUtils.mv "#{Dir.tmpdir}/playlist.m3u", "#{ROOT_FOLDER}/playlist.m3u"
-
-open("#{Dir.tmpdir}/playlist.rss", "w") {|rss| rss.write items.to_rss }
-FileUtils.mv "#{Dir.tmpdir}/playlist.rss", "#{ROOT_FOLDER}/playlist.rss"
-
-open("#{Dir.tmpdir}/playlist.json", "w") {|json|
+open("#{ROOT_FOLDER}/playlist.m3u", "w") {|m3u| m3u.write items.to_m3u }
+open("#{ROOT_FOLDER}/playlist.rss", "w") {|rss| rss.write items.to_rss }
+open("#{ROOT_FOLDER}/playlist.json", "w") {|json|
   names = Dir.glob("#{ROOT_FOLDER}/*.ogg").collect {|f| File.basename(f, '.ogg')}
   json.write names.to_json
 }
-FileUtils.mv "#{Dir.tmpdir}/playlist.json", "#{ROOT_FOLDER}/playlist.json"
 
 # Clean folder
 Dir.glob("#{ROOT_FOLDER}/*.ogg").sort_by {|f| test(?M, f)}.reverse.each_with_index {|f, i|
