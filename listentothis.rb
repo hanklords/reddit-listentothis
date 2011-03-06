@@ -245,6 +245,7 @@ class Playlist
     rss.to_s
   end
 
+  def names; @playlist.map {|i| i.name} end
   def to_a; @playlist end
 end
 
@@ -255,15 +256,11 @@ items = Playlist.new("http://www.reddit.com/r/listentothis/new.rss?sort=new&limi
 
 open("#{ROOT_FOLDER}/playlist.m3u", "w") {|m3u| m3u.write items.to_m3u }
 open("#{ROOT_FOLDER}/playlist.rss", "w") {|rss| rss.write items.to_rss }
-open("#{ROOT_FOLDER}/playlist.json", "w") {|json|
-  names = Dir.glob("#{ROOT_FOLDER}/*.ogg").collect {|f| File.basename(f, '.ogg')}
-  json.write names.to_json
-}
+open("#{ROOT_FOLDER}/playlist.json", "w") {|json| json.write items.names.to_json }
 
 # Clean folder
-Dir.glob("#{ROOT_FOLDER}/*.ogg").sort_by {|f| test(?M, f)}.reverse.each_with_index {|f, i|
-  next if i <= HISTORY_NUMBER
-  FileUtils.rm f ,:force => true
+oggs = Dir.glob("#{ROOT_FOLDER}/*.ogg").each { |f|
+  FileUtils.rm f ,:force => true if not items.names.include? File.basename(f, '.ogg')
 }
 
 ensure
