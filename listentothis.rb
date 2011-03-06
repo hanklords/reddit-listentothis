@@ -31,6 +31,10 @@ require 'time'
 require 'json'
 require 'ogginfo'
 
+RUNFILE="#{Dir.tmpdir}/#{ENV['LOGNAME']}_listentothis"
+exit if File.exist?(RUNFILE)
+File.open(RUNFILE, "w") {}
+
 TRANSCODE="ffmpeg -v -1 -i \"%s\" -vn -f wav - 2> /dev/null | oggenc -Q -o \"%s\" -"
 ROOT_SITE="http://yieu.eu/listentothis"
 ROOT_FOLDER="#{ENV['HOME']}/www/listentothis"
@@ -244,6 +248,7 @@ class Playlist
   def to_a; @playlist end
 end
 
+begin
 FileUtils.mkdir_p ROOT_FOLDER
 
 items = Playlist.new("http://www.reddit.com/r/listentothis/new.rss?sort=new&limit=#{HISTORY_NUMBER}")
@@ -266,4 +271,8 @@ Dir.glob("#{ROOT_FOLDER}/*.ogg").sort_by {|f| test(?M, f)}.reverse.each_with_ind
   next if i <= HISTORY_NUMBER
   FileUtils.rm f ,:force => true
 }
+
+ensure
+File.delete(RUNFILE)
+end
 
