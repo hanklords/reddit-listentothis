@@ -130,6 +130,7 @@ class YoutubeItem < Item
   YOUTUBE_DL="youtube-dl -qo \"%s\" \"%s\""
   def process
     if not valid?
+      puts @title
       video = "#{Dir.tmpdir}/youtube.video"
       system(YOUTUBE_DL % [video, @source])
       system(TRANSCODE % [video, @file])
@@ -209,9 +210,11 @@ class OggItem < Item
 end
 
 class Playlist
+  attr_reader :subreddit, :order
   def initialize(rss_file)
     @playlist = []
     @items = []
+    path, @subreddit, @order = *rss_file.match(%r{/r/(\w+)/.*\?\w+=(\w+)})
 
     @doc = Nokogiri::XML(open(rss_file))
     @doc.search('rss channel item').each { |rss_item|
@@ -226,11 +229,8 @@ class Playlist
   
   def process
     @items.each_slice(5) do |items|
-      items.each {|item|
-        puts item.title
-        fork {item.process}
-      }
-      Process.wait
+      items.each {|item| fork {item.process} }
+      Process.waitall
     end
     @playlist = @items.select {|item| item.valid? }
   end
@@ -251,13 +251,22 @@ class Playlist
 end
 
 begin
+
+module SubReddit
+  NEW = "http://www.reddit.com/r/%s/new.rss?sort=new&limit=#{HISTORY_NUMBER}"
+  TODAY = "http://www.reddit.com/r/%s/top.rss?t=day&limit=#{HISTORY_NUMBER}"
+  WEEK = "http://www.reddit.com/r/%s/top.rss?t=week&limit=#{HISTORY_NUMBER}"
+  MONTH = "http://www.reddit.com/r/%s/top.rss?t=month&limit=#{HISTORY_NUMBER}"
+  ALL = "http://www.reddit.com/r/%s/top.rss?t=all&limit=#{HISTORY_NUMBER}"
+end
+
 FileUtils.mkdir_p ROOT_FOLDER
 
 items = Playlist.new("http://www.reddit.com/r/listentothis/new.rss?sort=new&limit=#{HISTORY_NUMBER}")
 items.process
 
-open("#{ROOT_FOLDER}/playlist.m3u", "w") {|m3u| m3u.write items.to_m3u }
-open("#{ROOT_FOLDER}/playlist.rss", "w") {|rss| rss.write items.to_rss }
+open("#{ROOT_FOLDER}/#{items.subreddit}_#{items.order}.m3u", "w") {|m3u| m3u.write items.to_m3u }
+open("#{ROOT_FOLDER}/#{items.subreddit}_#{items.order}.rss", "w") {|rss| rss.write items.to_rss }
 open("#{ROOT_FOLDER}/playlist.json", "w") {|json| json.write items.names.to_json }
 
 # Clean folder
@@ -268,4 +277,3 @@ oggs = Dir.glob("#{ROOT_FOLDER}/*.ogg").each { |f|
 ensure
   FileUtils.rm  RUNFILE,:force => true
 end
-
