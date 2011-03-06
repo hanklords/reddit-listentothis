@@ -78,6 +78,8 @@ class Item
         MP3Item
       when /youtube.com/
         YoutubeItem
+      when /soundcloud.com/
+        SoundcloudItem
       when /jamendo.com.*album/
         JamendoAlbumItem
       when /last\.fm\//
@@ -129,6 +131,23 @@ class YoutubeItem < Item
       system(YOUTUBE_DL % [video, @source])
       system(TRANSCODE % [video, @file])
       FileUtils.rm video, :force => true
+    end
+  end
+end
+
+class SoundcloudItem < Item
+  def initialize(*args)
+    super(*args)
+
+    if not File.exist? @file
+      doc = Nokogiri::HTML.parse(open(@source))
+      json_txt = doc.at("script:contains('bufferTracks.push')").text.sub("window.SC.bufferTracks.push(", "").sub(/\);$/, "")
+      json = JSON.parse json_txt
+      uri = json["streamUrl"]
+      raw = "#{Dir.tmpdir}/youtube.video"
+      open(raw, "wb") {|lf| lf.write open(uri).read}
+      system(TRANSCODE % [raw, @file])
+      FileUtils.rm raw, :force => true
     end
   end
 end
