@@ -232,6 +232,9 @@ class Playlist
       Process.waitall
     end
     @playlist = @items.select {|item| item.valid? }
+    
+    open("#{ROOT_FOLDER}/#{@subreddit}_#{@order}.m3u", "w") {|m3u| m3u.write to_m3u }
+    open("#{ROOT_FOLDER}/#{@subreddit}_#{@order}.rss", "w") {|rss| rss.write to_rss }
   end
 
   def to_m3u
@@ -252,25 +255,26 @@ end
 begin
 
 module SubReddit
-  NEW = "http://www.reddit.com/r/%s/new.rss?sort=new&limit=#{HISTORY_NUMBER}"
-  TODAY = "http://www.reddit.com/r/%s/top.rss?t=day&limit=#{HISTORY_NUMBER}"
-  WEEK = "http://www.reddit.com/r/%s/top.rss?t=week&limit=#{HISTORY_NUMBER}"
-  MONTH = "http://www.reddit.com/r/%s/top.rss?t=month&limit=#{HISTORY_NUMBER}"
-  ALL = "http://www.reddit.com/r/%s/top.rss?t=all&limit=#{HISTORY_NUMBER}"
+  NEW = "http://www.reddit.com/r/%s/new.rss?sort=new&limit=#{HISTORY_NUMBER}".freeze
+  TODAY = "http://www.reddit.com/r/%s/top.rss?t=day&limit=#{HISTORY_NUMBER}".freeze
+  WEEK = "http://www.reddit.com/r/%s/top.rss?t=week&limit=#{HISTORY_NUMBER}".freeze
+  MONTH = "http://www.reddit.com/r/%s/top.rss?t=month&limit=#{HISTORY_NUMBER}".freeze
+  ALL = "http://www.reddit.com/r/%s/top.rss?t=all&limit=#{HISTORY_NUMBER}".freeze
 end
 
 FileUtils.mkdir_p ROOT_FOLDER
 
-items = Playlist.new("http://www.reddit.com/r/listentothis/new.rss?sort=new&limit=#{HISTORY_NUMBER}")
-items.process
-
-open("#{ROOT_FOLDER}/#{items.subreddit}_#{items.order}.m3u", "w") {|m3u| m3u.write items.to_m3u }
-open("#{ROOT_FOLDER}/#{items.subreddit}_#{items.order}.rss", "w") {|rss| rss.write items.to_rss }
-open("#{ROOT_FOLDER}/playlist.json", "w") {|json| json.write items.names.to_json }
+names = []
+[SubReddit::NEW, SubReddit::TODAY, SubReddit::WEEK, SubReddit::MONTH, SubReddit::ALL].each {|url|
+  items = Playlist.new(url % "listentothis")
+  items.process
+  names.concat items.names
+}
+open("#{ROOT_FOLDER}/playlist.json", "w") {|json| json.write names.to_json }
 
 # Clean folder
 oggs = Dir.glob("#{ROOT_FOLDER}/*.ogg").each { |f|
-  FileUtils.rm f ,:force => true if not items.names.include? File.basename(f, '.ogg')
+  FileUtils.rm f ,:force => true if not names.include? File.basename(f, '.ogg')
 }
 
 ensure
