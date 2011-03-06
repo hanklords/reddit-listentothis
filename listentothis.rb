@@ -95,7 +95,7 @@ class Item
     klass.new(rss_node, url)
   end
 
-  attr_reader :name, :url, :source
+  attr_reader :name, :url, :source, :title
   def initialize(rss_node, url)
     @rss_node = rss_node
     @source = url
