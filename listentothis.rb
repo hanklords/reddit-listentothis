@@ -26,6 +26,7 @@ require 'nokogiri'
 require 'open-uri'
 require 'cgi'
 require 'tmpdir'
+require 'tempfile'
 require 'net/http'
 require 'time'
 require 'json'
@@ -35,7 +36,6 @@ RUNFILE="#{Dir.tmpdir}/#{ENV['LOGNAME']}_listentothis"
 exit if File.exist?(RUNFILE)
 FileUtils.touch(RUNFILE)
 
-TRANSCODE="ffmpeg -v -1 -i \"%s\" -vn -f wav - 2> /dev/null | oggenc -Q -o \"%s\" -"
 ROOT_SITE="http://yieu.eu/listentothis"
 ROOT_FOLDER="#{ENV['HOME']}/www/listentothis"
 HISTORY_NUMBER=100
@@ -64,6 +64,7 @@ class LastFMmp3
 end
 
 class Item
+  TRANSCODE="ffmpeg -v -1 -i \"%s\" -vn -f wav - 2> /dev/null | oggenc -Q -o \"%s\" -".freeze
   class UnknownSource < StandardError; end
   def self.create(rss_node)
     content = rss_node.at('description').content
@@ -107,6 +108,8 @@ class Item
 
   def process; true end
   def valid?; File.file? @file end
+  def source_file; @source_file ||= Tempfile.new('listentothis') end
+  def transcode; system(TRANSCODE % [source_file.path, @file]) end
 
   def to_m3u
     length = OggInfo.open(@file) {|ogg| ogg.length.to_i}
@@ -131,10 +134,9 @@ class YoutubeItem < Item
   def process
     if not valid?
       puts @title
-      video = "#{Dir.tmpdir}/youtube.video"
-      system(YOUTUBE_DL % [video, @source])
-      system(TRANSCODE % [video, @file])
-      FileUtils.rm video, :force => true
+      system(YOUTUBE_DL % [source_file.path, @source])
+      transcode
+      source_file.close
     end
   end
 end
@@ -146,10 +148,9 @@ class SoundcloudItem < Item
       json_txt = doc.at("script:contains('bufferTracks.push')").text.sub("window.SC.bufferTracks.push(", "").sub(/\);$/, "")
       json = JSON.parse json_txt
       uri = json["streamUrl"]
-      raw = "#{Dir.tmpdir}/youtube.video"
-      open(raw, "wb") {|lf| lf.write open(uri).read}
-      system(TRANSCODE % [raw, @file])
-      FileUtils.rm raw, :force => true
+      source_file.write open(uri).read
+      transcode
+      source_file.close
     end
   end
 end
@@ -158,10 +159,9 @@ class LastFMItem < Item
   def process
     if not valid?
       lfm = LastFMmp3.new(@source)
-      mp3 = "#{Dir.tmpdir}/#{lfm.id}.mp3"
-      open(mp3, "wb") {|f| f.write lfm.media_io.read }
-      system(TRANSCODE % [mp3, @file])
-      FileUtils.rm mp3, :force => true
+      source_file.write lfm.media_io.read
+      transcode
+      source_file.close
     end
   end
 end
@@ -193,10 +193,9 @@ end
 class MP3Item < Item
   def process
     if not valid?
-      mp3 = "#{Dir.tmpdir}/#@name.mp3"
-      open(mp3, "wb") {|f| f.write open(@source, "rb").read }
-      system(TRANSCODE % [mp3, @file])
-      FileUtils.rm mp3, :force => true
+      source_file.write open(@source, "rb").read
+      transcode
+      source_file.close
     end
   end
 end
