@@ -273,6 +273,6 @@ Dir.glob("#{ROOT_FOLDER}/*.ogg").sort_by {|f| test(?M, f)}.reverse.each_with_ind
 }
 
 ensure
-File.delete(RUNFILE)
+  FileUtils.rm  RUNFILE,:force => true
 end
 
