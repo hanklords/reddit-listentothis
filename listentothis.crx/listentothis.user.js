@@ -19,6 +19,17 @@
 // TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 // SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+// ==UserScript==
+// @name           listentothis
+// @include        http://www.reddit.com/r/listentothis*
+// @include        http://www.reddit.com/r/Music*
+// @description    Render /r/listentothis into a playlist.
+// @copyright      2009, Mael Clerambault <maelclerambault@yahoo.fr>
+// @require        jquery.js
+// @resource       css listentothis.css
+// @version        0.3
+// ==/UserScript==
+
 site =  "http://yieu.eu/listentothis/"
 audio = null
 
@@ -107,6 +118,13 @@ function load(msg) {
 $(function() {
   if(chrome) {
     chrome.extension.connect().onMessage.addListener(load)
+  } else if(GM_xmlhttpRequest) {
+    GM_addStyle(GM_getResourceText("css"))
+    GM_xmlhttpRequest({
+      method: "GET",
+      url: site + "playlist.json",
+      onload: function(r) { load(r.responseText) }
+    })
   }
 })
 
