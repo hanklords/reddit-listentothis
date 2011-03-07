@@ -64,7 +64,7 @@ class LastFMmp3
 end
 
 class Item
-  TRANSCODE="ffmpeg -i \"%s\" -vn -f wav - | oggenc -Q -o \"%s\" -".freeze
+  TRANSCODE="ffmpeg -i \"%s\" -vn -acodec libvorbis \"%s\"".freeze
   class UnknownSource < StandardError; end
   def self.create(rss_node)
     content = rss_node.at('description').content
