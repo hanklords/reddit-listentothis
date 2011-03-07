@@ -19,91 +19,92 @@
 // TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 // SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+site =  "http://yieu.eu/listentothis/"
+audio = null
+subreddit = $(".pagename").text()
 
-$(function() {
-  site =  "http://yieu.eu/listentothis/"
-  audio = null
-  subreddit = $(".pagename").text()
-
-  function setPlayer(links) {
-    $(".side").prepend(
-      "<div class=\"spacer\"><div class=\"sidebox listen\">\
-      <audio controls=\"true\" src=\"" + links[0] + "\"></audio>\
-      <div><a href=\"#\" class=\"previous\">(prev) |&lt;</a><a href=\"#\" class=\"next\">&gt;| (next)</a></div>\
-      <div class=\"subtitle playing\">Playing:</div>\
-      <div class=\"subtitle\">\
-        Podcast :\
-        <a href=\"" + site + subreddit + "_new.rss\">New</a>\
-        <a href=\"" + site + subreddit + "_day.rss\">Today</a>\
-        <a href=\"" + site + subreddit + "_week.rss\">Weekly</a>\
-        <a href=\"" + site + subreddit + "_month.rss\">Monthly</a>\
-        <a href=\"" + site + subreddit + "_all.rss\">All</a>\
-      </div>\
-      <div class=\"subtitle\">\
-        Playlist :\
-        <a href=\"" + site + subreddit + "_new.m3u\">New</a>\
-        <a href=\"" + site + subreddit + "_day.m3u\">Today</a>\
-        <a href=\"" + site + subreddit + "_week.m3u\">Weekly</a>\
-        <a href=\"" + site + subreddit + "_month.m3u\">Monthly</a>\
-        <a href=\"" + site + subreddit + "_all.m3u\">All</a>\
-      </div>\
-      </div></div>"
-    )
-    audio = $("audio")[0]
-    audio.playlist = links
-    audio.orig_play = audio.play
-    audio.play = function(src) {
-      this.src = src
-      this.load()
-      this.orig_play()
-    }
-
-    audio.previous = function() {
-      current = $.inArray(decodeURI(this.src), this.playlist)
-      if(current == 0) { current = this.playlist.length }
-      this.play(this.playlist[current - 1])
-    }
-
-    audio.next = function() {
-      current = $.inArray(decodeURI(this.src), this.playlist)
-      if(current == this.playlist.length - 1) { current = -1 }
-      this.play(this.playlist[current + 1])
-    }
-
-    $("audio").bind("ended", function() {audio.next()})
-    $("audio").bind("play", function() {
-      $("div.link").removeClass("listening")
-      item = $("div.link:has(a[href='" + decodeURI(this.src) + "'])")
-      item.addClass("listening")
-      $("div.playing").text("Playing: " + $("a.title", item).text())
-    })
-
-    $(".previous").click(function() {audio.previous() })
-    $(".next").click(function () {audio.next() })
-    $(".previous, .next").click(function(event) {event.preventDefault()})
+function setPlayer(links) {
+  $(".side").prepend(
+    "<div class=\"spacer\"><div class=\"sidebox listen\">\
+    <audio controls=\"true\" src=\"" + links[0] + "\"></audio>\
+    <div><a href=\"#\" class=\"previous\">(prev) |&lt;</a><a href=\"#\" class=\"next\">&gt;| (next)</a></div>\
+    <div class=\"subtitle playing\">Playing:</div>\
+    <div class=\"subtitle\">\
+      Podcast :\
+      <a href=\"" + site + subreddit + "_new.rss\">New</a>\
+      <a href=\"" + site + subreddit + "_day.rss\">Today</a>\
+      <a href=\"" + site + subreddit + "_week.rss\">Weekly</a>\
+      <a href=\"" + site + subreddit + "_month.rss\">Monthly</a>\
+      <a href=\"" + site + subreddit + "_all.rss\">All</a>\
+    </div>\
+    <div class=\"subtitle\">\
+      Playlist :\
+      <a href=\"" + site + subreddit + "_new.m3u\">New</a>\
+      <a href=\"" + site + subreddit + "_day.m3u\">Today</a>\
+      <a href=\"" + site + subreddit + "_week.m3u\">Weekly</a>\
+      <a href=\"" + site + subreddit + "_month.m3u\">Monthly</a>\
+      <a href=\"" + site + subreddit + "_all.m3u\">All</a>\
+    </div>\
+    </div></div>"
+  )
+  audio = $("audio")[0]
+  audio.playlist = links
+  audio.orig_play = audio.play
+  audio.play = function(src) {
+    this.src = src
+    this.load()
+    this.orig_play()
   }
 
-  var port = chrome.extension.connect()
-  port.onMessage.addListener(function(msg) {
-    var known = $.map(eval(msg), function(e) {return site + e + ".ogg"})
-    var links = []
+  audio.previous = function() {
+    current = $.inArray(decodeURI(this.src), this.playlist)
+    if(current == 0) { current = this.playlist.length }
+    this.play(this.playlist[current - 1])
+  }
 
-    $("div.link").each(function(i) {
-      var href = $("a.comments", this).attr("href").split("/")
-      var name = href[href.length - 2]
-      var link = site + name + ".ogg"
+  audio.next = function() {
+    current = $.inArray(decodeURI(this.src), this.playlist)
+    if(current == this.playlist.length - 1) { current = -1 }
+    this.play(this.playlist[current + 1])
+  }
 
-      if($.inArray(link, known) != -1) {
-        links.push(link);
-        $("ul.buttons", this).append("<li><a class=\"ogglink\" href=\"" + link + "\">Play</a></li>")
-      }
-    })
-
-    if(links.length > 0) { setPlayer(links) }
-    $("a.ogglink").click(function(event) {
-      audio.play(this.href)
-      event.preventDefault()
-    })
+  $("audio").bind("ended", function() {audio.next()})
+  $("audio").bind("play", function() {
+    $("div.link").removeClass("listening")
+    item = $("div.link:has(a[href='" + decodeURI(this.src) + "'])")
+    item.addClass("listening")
+    $("div.playing").text("Playing: " + $("a.title", item).text())
   })
+
+  $(".previous").click(function() {audio.previous() })
+  $(".next").click(function () {audio.next() })
+  $(".previous, .next").click(function(event) {event.preventDefault()})
+}
+
+function load(msg) {
+  var known = $.map(eval(msg), function(e) {return site + e + ".ogg"})
+  var links = []
+
+  $("div.link").each(function(i) {
+    var href = $("a.comments", this).attr("href").split("/")
+    var name = href[href.length - 2]
+    var link = site + name + ".ogg"
+
+    if($.inArray(link, known) != -1) {
+      links.push(link);
+      $("ul.buttons", this).append("<li><a class=\"ogglink\" href=\"" + link + "\">Play</a></li>")
+    }
+  })
+
+  if(links.length > 0) { setPlayer(links) }
+  $("a.ogglink").click(function(event) {
+    audio.play(this.href)
+    event.preventDefault()
+  })
+}
+  
+$(function() {
+  var port = chrome.extension.connect()
+  port.onMessage.addListener(load)
 })
 
