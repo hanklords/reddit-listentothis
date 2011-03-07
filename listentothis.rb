@@ -272,11 +272,13 @@ end
 FileUtils.mkdir_p ROOT_FOLDER
 
 names = []
-[SubReddit::NEW, SubReddit::TODAY, SubReddit::WEEK, SubReddit::MONTH, SubReddit::ALL].each {|url|
-  items = Playlist.new(url % "listentothis")
-  items.process
-  names.concat items.names
-}
+%w{listentothis music}.each do |subreddit|
+  [SubReddit::NEW, SubReddit::TODAY, SubReddit::WEEK, SubReddit::MONTH, SubReddit::ALL].each {|url|
+    items = Playlist.new(url % subreddit)
+    items.process
+    names.concat items.names
+  }
+end
 open("#{ROOT_FOLDER}/playlist.json", "w") {|json| json.write names.to_json }
 
 # Clean folder
