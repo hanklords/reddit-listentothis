@@ -64,7 +64,7 @@ class LastFMmp3
 end
 
 class Item
-  TRANSCODE="ffmpeg -v -1 -i \"%s\" -vn -f wav - 2> /dev/null | oggenc -Q -o \"%s\" -".freeze
+  TRANSCODE="ffmpeg -i \"%s\" -vn -f wav - | oggenc -Q -o \"%s\" -".freeze
   class UnknownSource < StandardError; end
   def self.create(rss_node)
     content = rss_node.at('description').content
@@ -109,7 +109,7 @@ class Item
   def process; true end
   def valid?; File.file? @file end
   def tempfile; Tempfile.open('listentothis') {|f| yield f} end
-  def transcode(source); system(TRANSCODE % [source, @file]) end
+  def transcode(source); system(TRANSCODE % [source, @file], [0,1,2] => :close) end
 
   def to_m3u
     length = OggInfo.open(@file) {|ogg| ogg.length.to_i}
@@ -130,13 +130,13 @@ class Item
 end
 
 class YoutubeItem < Item
-  YOUTUBE_DL="youtube-dl -qo \"%s\" \"%s\""
+  YOUTUBE_DL="youtube-dl".freeze
   def process
     if not valid?
       puts @title
       
       tempfile {|f|
-        system(YOUTUBE_DL % [f.path, @source])
+        system(YOUTUBE_DL, "-qo", f.path, @source, [0,1,2] => :close)
         transcode(f.path)
       }
     end
@@ -226,7 +226,7 @@ class Playlist
       begin
         @items << Item.create(rss_item)
       rescue Item::UnknownSource => e
-        p e
+#        p e
         next
       end
     }
