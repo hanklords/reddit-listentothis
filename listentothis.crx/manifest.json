@@ -2,6 +2,7 @@
   "name": "listentothis",
   "version": "0.1",
   "description": "Listen to listentothis",
+  "update_url": "http://yieu.eu/listentothis/update.xml",
   "permissions": [ "http://yieu.eu/" ],
   "background_page": "background.html",
   "content_scripts": [
@@ -12,4 +13,3 @@
     }
   ]
 }
-
