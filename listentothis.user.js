@@ -31,8 +31,7 @@ $(function() {
   site =  "http://yieu.eu/listentothis/"
   audio = null
   GM_addStyle(".listen {padding-left:0} .next, .previous {color: #888888; font-weight: bold; padding:0px 1px;} .listening {background-color:#F8E0EC}")
-  page_match = document.location.pathname.match(/\/r\/(\w+)/)
-  page = page_match[1]
+  subreddit = $(".pagename").text()
 
   function setPlayer(links) {
     $(".side").prepend(
@@ -40,8 +39,22 @@ $(function() {
       <audio controls=\"true\" src=\"" + links[0] + "\"></audio>\
       <div><a href=\"#\" class=\"previous\">(prev) |&lt;</a><a href=\"#\" class=\"next\">&gt;| (next)</a></div>\
       <div class=\"subtitle playing\">Playing:</div>\
-      <div class=\"subtitle\"><a href=\"" + site + "playlist.rss\">Podcast</a></div>\
-      <div class=\"subtitle\"><a href=\"" + site + "playlist.m3u\">Playlist</a></div>\
+      <div class=\"subtitle\">\
+        Podcast :\
+        <a href=\"" + site + subreddit + "_new.rss\">New</a>\
+        <a href=\"" + site + subreddit + "_day.rss\">Today</a>\
+        <a href=\"" + site + subreddit + "_week.rss\">Weekly</a>\
+        <a href=\"" + site + subreddit + "_month.rss\">Monthly</a>\
+        <a href=\"" + site + subreddit + "_all.rss\">All</a>\
+      </div>\
+      <div class=\"subtitle\">\
+        Playlist :\
+        <a href=\"" + site + subreddit + "_new.m3u\">New</a>\
+        <a href=\"" + site + subreddit + "_day.m3u\">Today</a>\
+        <a href=\"" + site + subreddit + "_week.m3u\">Weekly</a>\
+        <a href=\"" + site + subreddit + "_month.m3u\">Monthly</a>\
+        <a href=\"" + site + subreddit + "_all.m3u\">All</a>\
+      </div>\
       </div></div>"
     )
     audio = $("audio")[0]
