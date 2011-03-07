@@ -108,8 +108,8 @@ class Item
 
   def process; true end
   def valid?; File.file? @file end
-  def source_file; @source_file ||= Tempfile.new('listentothis') end
-  def transcode; system(TRANSCODE % [source_file.path, @file]) end
+  def tempfile; Tempfile.open('listentothis') {|f| yield f} end
+  def transcode(source); system(TRANSCODE % [source, @file]) end
 
   def to_m3u
     length = OggInfo.open(@file) {|ogg| ogg.length.to_i}
@@ -134,9 +134,11 @@ class YoutubeItem < Item
   def process
     if not valid?
       puts @title
-      system(YOUTUBE_DL % [source_file.path, @source])
-      transcode
-      source_file.close
+      
+      tempfile {|f|
+        system(YOUTUBE_DL % [f.path, @source])
+        transcode(f.path)
+      }
     end
   end
 end
@@ -148,9 +150,11 @@ class SoundcloudItem < Item
       json_txt = doc.at("script:contains('bufferTracks.push')").text.sub("window.SC.bufferTracks.push(", "").sub(/\);$/, "")
       json = JSON.parse json_txt
       uri = json["streamUrl"]
-      source_file.write open(uri).read
-      transcode
-      source_file.close
+      
+      tempfile {|f|
+        f.write open(uri).read
+        transcode(f.path)
+      }
     end
   end
 end
@@ -159,9 +163,10 @@ class LastFMItem < Item
   def process
     if not valid?
       lfm = LastFMmp3.new(@source)
-      source_file.write lfm.media_io.read
-      transcode
-      source_file.close
+      tempfile {|f|
+        f.write lfm.media_io.read
+        transcode(f.path)
+      }
     end
   end
 end
@@ -193,9 +198,10 @@ end
 class MP3Item < Item
   def process
     if not valid?
-      source_file.write open(@source, "rb").read
-      transcode
-      source_file.close
+      tempfile {|f|
+        f.write open(@source, "rb").read
+        transcode(f.path)
+      }
     end
   end
 end
