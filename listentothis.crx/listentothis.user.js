@@ -103,9 +103,10 @@ function load(msg) {
     event.preventDefault()
   })
 }
-  
+
 $(function() {
-  var port = chrome.extension.connect()
-  port.onMessage.addListener(load)
+  if(chrome) {
+    chrome.extension.connect().onMessage.addListener(load)
+  }
 })
 
