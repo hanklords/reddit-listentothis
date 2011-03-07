@@ -21,9 +21,10 @@
 
 site =  "http://yieu.eu/listentothis/"
 audio = null
-subreddit = $(".pagename").text()
 
 function setPlayer(links) {
+  var subreddit = $(".pagename").text()
+
   $(".side").prepend(
     "<div class=\"spacer\"><div class=\"sidebox listen\">\
     <audio controls=\"true\" src=\"" + links[0] + "\"></audio>\
@@ -57,13 +58,13 @@ function setPlayer(links) {
   }
 
   audio.previous = function() {
-    current = $.inArray(decodeURI(this.src), this.playlist)
+    var current = $.inArray(decodeURI(this.src), this.playlist)
     if(current == 0) { current = this.playlist.length }
     this.play(this.playlist[current - 1])
   }
 
   audio.next = function() {
-    current = $.inArray(decodeURI(this.src), this.playlist)
+    var current = $.inArray(decodeURI(this.src), this.playlist)
     if(current == this.playlist.length - 1) { current = -1 }
     this.play(this.playlist[current + 1])
   }
@@ -71,7 +72,7 @@ function setPlayer(links) {
   $("audio").bind("ended", function() {audio.next()})
   $("audio").bind("play", function() {
     $("div.link").removeClass("listening")
-    item = $("div.link:has(a[href='" + decodeURI(this.src) + "'])")
+    var item = $("div.link:has(a[href='" + decodeURI(this.src) + "'])")
     item.addClass("listening")
     $("div.playing").text("Playing: " + $("a.title", item).text())
   })
@@ -82,7 +83,7 @@ function setPlayer(links) {
 }
 
 function load(msg) {
-  var known = $.map(eval(msg), function(e) {return site + e + ".ogg"})
+  var known = $.map(JSON.parse(msg), function(e) {return site + e + ".ogg"})
   var links = []
 
   $("div.link").each(function(i) {
