@@ -1,6 +1,6 @@
 {
   "name": "listentothis",
-  "version": "0.1",
+  "version": "0.2",
   "description": "Listen to listentothis",
   "update_url": "http://yieu.eu/listentothis/update.xml",
   "permissions": [ "http://yieu.eu/" ],
