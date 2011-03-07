@@ -68,7 +68,7 @@ class Item
   class UnknownSource < StandardError; end
   def self.create(rss_node)
     content = rss_node.at('description').content
-    d = Nokogiri::HTML(CGI.unescape(content))
+    d = Nokogiri::HTML(CGI.unescapeHTML(content))
     url = nil
     d.search('a').each {|a|
       next if not a.content == '[link]'
