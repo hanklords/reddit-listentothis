@@ -233,10 +233,11 @@ class Playlist
   end
   
   def process
-    @items.each_slice(5) do |items|
-      items.each {|item| fork {item.process} }
-      Process.waitall
+    @items.each_with_index do |item, index|
+      fork {item.process}
+      Process.wait if index >= 4
     end
+    Process.waitall
     @playlist = @items.select {|item| item.valid? }
     
     open("#{ROOT_FOLDER}/#{@subreddit}_#{@order}.m3u", "w") {|m3u| m3u.write to_m3u }
