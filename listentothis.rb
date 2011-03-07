@@ -26,7 +26,6 @@ require 'nokogiri'
 require 'open-uri'
 require 'cgi'
 require 'tmpdir'
-require 'tempfile'
 require 'net/http'
 require 'time'
 require 'json'
@@ -64,7 +63,7 @@ class LastFMmp3
 end
 
 class Item
-  TRANSCODE="ffmpeg -i \"%s\" -vn -acodec libvorbis \"%s\"".freeze
+  TRANSCODE="ffmpeg -i \"%s\" -vn -acodec libvorbis -ab 128k -ac 2 \"%s\"".freeze
   class UnknownSource < StandardError; end
   def self.create(rss_node)
     content = rss_node.at('description').content
@@ -108,8 +107,15 @@ class Item
 
   def process; true end
   def valid?; File.file? @file end
-  def tempfile; Tempfile.open('listentothis') {|f| yield f} end
-  def transcode(source); system(TRANSCODE % [source, @file], [0,1,2] => :close) end
+  def tempfile
+    tmpfile = "#{Dir.tmpdir}/#{ENV['LOGNAME']}_listentothis_#@name"
+    begin
+      yield tmpfile
+    ensure
+      FileUtils.rm  tmpfile,:force => true
+    end
+  end
+  def transcode(source); system(TRANSCODE % [source, @file], 2 => :close) end
 
   def to_m3u
     length = OggInfo.open(@file) {|ogg| ogg.length.to_i}
@@ -135,9 +141,10 @@ class YoutubeItem < Item
     if not valid?
       puts @title
       
-      tempfile {|f|
-        system(YOUTUBE_DL, "-qo", f.path, @source, [0,1,2] => :close)
-        transcode(f.path)
+      tempfile {|tmpfile|
+        if system(YOUTUBE_DL, "--max-quality=18", "--no-part", "-qo", tmpfile, @source, 2 => :close)
+          transcode(tmpfile)
+        end
       }
     end
   end
@@ -151,9 +158,9 @@ class SoundcloudItem < Item
       json = JSON.parse json_txt
       uri = json["streamUrl"]
       
-      tempfile {|f|
-        f.write open(uri).read
-        transcode(f.path)
+      tempfile {|tmpfile|
+        open(tmpfile, "w") {|f| f.write open(uri).read }
+        transcode(tmpfile)
       }
     end
   end
@@ -163,9 +170,9 @@ class LastFMItem < Item
   def process
     if not valid?
       lfm = LastFMmp3.new(@source)
-      tempfile {|f|
-        f.write lfm.media_io.read
-        transcode(f.path)
+      tempfile {|tmpfile|
+        open(tmpfile, "w") {|f| f.write lfm.media_io.read }
+        transcode(tmpfile)
       }
     end
   end
@@ -198,9 +205,9 @@ end
 class MP3Item < Item
   def process
     if not valid?
-      tempfile {|f|
-        f.write open(@source, "rb").read
-        transcode(f.path)
+      tempfile {|tmpfile|
+        open(tmpfile, "w") {|f| f.write open(@source, "rb").read }
+        transcode(tmpfile)
       }
     end
   end
@@ -226,7 +233,6 @@ class Playlist
       begin
         @items << Item.create(rss_item)
       rescue Item::UnknownSource => e
-#        p e
         next
       end
     }
@@ -235,7 +241,7 @@ class Playlist
   def process
     @items.each_with_index do |item, index|
       fork {item.process}
-      Process.wait if index >= 4
+      Process.wait if index >= 1
     end
     Process.waitall
     @playlist = @items.select {|item| item.valid? }
@@ -274,6 +280,7 @@ FileUtils.mkdir_p ROOT_FOLDER
 names = []
 %w{listentothis music}.each do |subreddit|
   [SubReddit::NEW, SubReddit::TODAY, SubReddit::WEEK, SubReddit::MONTH, SubReddit::ALL].each {|url|
+    puts url % subreddit
     items = Playlist.new(url % subreddit)
     items.process
     names.concat items.names
