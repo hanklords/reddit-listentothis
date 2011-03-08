@@ -93,8 +93,7 @@ function setPlayer(links) {
   $(".previous, .next").click(function(event) {event.preventDefault()})
 }
 
-function load(msg) {
-  var known = $.map(JSON.parse(msg), function(e) {return site + e + ".ogg"})
+function load(known) {
   var links = []
 
   $("div.link").each(function(i) {
@@ -102,7 +101,7 @@ function load(msg) {
     var name = href[href.length - 2]
     var link = site + name + ".ogg"
 
-    if($.inArray(link, known) != -1) {
+    if($.inArray(name, known) != -1) {
       links.push(link);
       $("ul.buttons", this).append("<li><a class=\"ogglink\" href=\"" + link + "\">Play</a></li>")
     }
@@ -123,7 +122,7 @@ $(function() {
     GM_xmlhttpRequest({
       method: "GET",
       url: site + "playlist.json",
-      onload: function(r) { load(r.responseText) }
+      onload: function(r) { load(JSON.parse(r.responseText)) }
     })
   }
 })
