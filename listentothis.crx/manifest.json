@@ -1,7 +1,8 @@
 {
   "name": "listentothis",
-  "version": "0.2",
+  "version": "0.3",
   "description": "Listen to listentothis",
+  "homepage_url": "http://github.com/hanklords/reddit-listentothis",
   "update_url": "http://yieu.eu/listentothis/update.xml",
   "permissions": [ "http://yieu.eu/" ],
   "background_page": "background.html",
