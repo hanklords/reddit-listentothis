@@ -116,9 +116,9 @@ function load(msg) {
 }
 
 $(function() {
-  if(chrome) {
+  if(typeof chrome == 'function') {
     chrome.extension.connect().onMessage.addListener(load)
-  } else if(GM_xmlhttpRequest) {
+  } else if(typeof GM_xmlhttpRequest == 'function') {
     GM_addStyle(GM_getResourceText("css"))
     GM_xmlhttpRequest({
       method: "GET",
