@@ -114,16 +114,14 @@ function load(known) {
   })
 }
 
-$(function() {
-  if(typeof chrome == 'object') {
-    chrome.extension.sendRequest({}, function(r) { load(r) })
-  } else if(typeof GM_xmlhttpRequest == 'function') {
-    GM_addStyle(GM_getResourceText("css"))
-    GM_xmlhttpRequest({
-      method: "GET",
-      url: site + "playlist.json",
-      onload: function(r) { load(JSON.parse(r.responseText)) }
-    })
-  }
-})
+if(typeof chrome == 'object') {
+  chrome.extension.sendRequest({}, function(r) { load(r) })
+} else if(typeof GM_xmlhttpRequest == 'function') {
+  GM_addStyle(GM_getResourceText("css"))
+  GM_xmlhttpRequest({
+    method: "GET",
+    url: site + "playlist.json",
+    onload: function(r) { load(JSON.parse(r.responseText)) }
+  })
+}
 
