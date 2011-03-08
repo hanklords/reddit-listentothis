@@ -63,7 +63,7 @@ class LastFMmp3
 end
 
 class Item
-  TRANSCODE="ffmpeg -i \"%s\" -vn -acodec libvorbis -ab 128k -ac 2 \"%s\"".freeze
+  TRANSCODE=%w{ffmpeg -i -vn -acodec libvorbis -ab 128k -ac 2}.freeze
   class UnknownSource < StandardError; end
   def self.create(rss_node)
     content = rss_node.at('description').content
@@ -116,7 +116,10 @@ class Item
       FileUtils.rm  tmpfile,:force => true
     end
   end
-  def transcode(source); system(TRANSCODE % [source, @file], 2 => :close) end
+  def transcode(source)
+    i = TRANSCODE.index("-i")
+    system(*TRANSCODE.dup.insert(i+1, source), @file, 2 => :close) 
+  end
 
   def disable; FileUtils.touch @disable end
   def disabled?; File.file? @disable end
@@ -140,12 +143,12 @@ class Item
 end
 
 class YoutubeItem < Item
-  YOUTUBE_DL="youtube-dl".freeze
+  YOUTUBE_DL=%w{youtube-dl --max-quality=18 --no-part -r 500k -q -o}.freeze
   def process
     puts @title
     
     tempfile {|tmpfile|
-      if system(YOUTUBE_DL, "--max-quality=18", "--no-part", "-qo", tmpfile, @source, 2 => :close)
+      if system(*YOUTUBE_DL, tmpfile, @source, 2 => :close)
         transcode(tmpfile)
       else
         disable
@@ -229,7 +232,7 @@ class Playlist
       begin
         @items << Item.create(rss_item)
       rescue Item::UnknownSource => e
-        p e
+#        p e
         next
       end
     }
