@@ -1,8 +1,12 @@
 {
   "name": "listentothis",
-  "version": "0.3",
+  "version": "0.4",
   "description": "Listen to listentothis",
   "homepage_url": "http://github.com/hanklords/reddit-listentothis",
+  "icons": { 
+    "48":  "listentothis48.png",
+    "64":  "listentothis64.png",
+    "128": "listentothis128.png" },
   "update_url": "http://yieu.eu/listentothis/update.xml",
   "permissions": [ "http://yieu.eu/" ],
   "background_page": "background.html",

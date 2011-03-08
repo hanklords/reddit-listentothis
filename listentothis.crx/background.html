@@ -1,8 +1,8 @@
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript">
-  chrome.extension.onConnect.addListener(function(port) {
+  chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
     $.get("http://yieu.eu/listentothis/playlist.json", function(data) {
-      port.postMessage(data)
+      sendResponse(data)
     })
   });
 </script>

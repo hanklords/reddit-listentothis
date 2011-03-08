@@ -24,6 +24,7 @@
 // @include        http://www.reddit.com/r/listentothis*
 // @include        http://www.reddit.com/r/Music*
 // @description    Render /r/listentothis into a playlist.
+// @icon           listentothis.png
 // @copyright      2009, Mael Clerambault <maelclerambault@yahoo.fr>
 // @require        jquery.js
 // @resource       css listentothis.css
@@ -31,7 +32,6 @@
 // ==/UserScript==
 
 site =  "http://yieu.eu/listentothis/"
-audio = null
 
 function setPlayer(links) {
   var subreddit = $(".pagename").text()
@@ -59,7 +59,7 @@ function setPlayer(links) {
     </div>\
     </div></div>"
   )
-  audio = $("audio")[0]
+  var audio = $("audio")[0]
   audio.playlist = links
   audio.orig_play = audio.play
   audio.play = function(src) {
@@ -80,7 +80,7 @@ function setPlayer(links) {
     this.play(this.playlist[current + 1])
   }
 
-  $("audio").bind("ended", function() {audio.next()})
+  $("audio").bind("ended", function() {$("audio")[0].next()})
   $("audio").bind("play", function() {
     $("div.link").removeClass("listening")
     var item = $("div.link:has(a[href='" + decodeURI(this.src) + "'])")
@@ -88,8 +88,8 @@ function setPlayer(links) {
     $("div.playing").text("Playing: " + $(".listening a.title").text())
   })
 
-  $(".previous").click(function() {audio.previous() })
-  $(".next").click(function () {audio.next() })
+  $(".previous").click(function() {$("audio")[0].previous() })
+  $(".next").click(function () {$("audio")[0].next() })
   $(".previous, .next").click(function(event) {event.preventDefault()})
 }
 
@@ -110,14 +110,14 @@ function load(msg) {
 
   if(links.length > 0) { setPlayer(links) }
   $("a.ogglink").click(function(event) {
-    audio.play(this.href)
+    $("audio")[0].play(this.href)
     event.preventDefault()
   })
 }
 
 $(function() {
-  if(typeof chrome == 'function') {
-    chrome.extension.connect().onMessage.addListener(load)
+  if(typeof chrome == 'object') {
+    chrome.extension.sendRequest({}, function(r) { load(r) })
   } else if(typeof GM_xmlhttpRequest == 'function') {
     GM_addStyle(GM_getResourceText("css"))
     GM_xmlhttpRequest({
