@@ -142,45 +142,39 @@ end
 class YoutubeItem < Item
   YOUTUBE_DL="youtube-dl".freeze
   def process
-    if not valid? and not disabled?
-      puts @title
-      
-      tempfile {|tmpfile|
-        if system(YOUTUBE_DL, "--max-quality=18", "--no-part", "-qo", tmpfile, @source, 2 => :close)
-          transcode(tmpfile)
-        else
-          disable
-        end
-      }
-    end
+    puts @title
+    
+    tempfile {|tmpfile|
+      if system(YOUTUBE_DL, "--max-quality=18", "--no-part", "-qo", tmpfile, @source, 2 => :close)
+        transcode(tmpfile)
+      else
+        disable
+      end
+    }
   end
 end
 
 class SoundcloudItem < Item
   def process
-    if not valid?
-      doc = Nokogiri::HTML.parse(open(@source))
-      json_txt = doc.at("script:contains('bufferTracks.push')").text.sub("window.SC.bufferTracks.push(", "").sub(/\);$/, "")
-      json = JSON.parse json_txt
-      uri = json["streamUrl"]
-      
-      tempfile {|tmpfile|
-        open(tmpfile, "w") {|f| f.write open(uri).read }
-        transcode(tmpfile)
-      }
-    end
+    doc = Nokogiri::HTML.parse(open(@source))
+    json_txt = doc.at("script:contains('bufferTracks.push')").text.sub("window.SC.bufferTracks.push(", "").sub(/\);$/, "")
+    json = JSON.parse json_txt
+    uri = json["streamUrl"]
+    
+    tempfile {|tmpfile|
+      open(tmpfile, "w") {|f| f.write open(uri).read }
+      transcode(tmpfile)
+    }
   end
 end
 
 class LastFMItem < Item
   def process
-    if not valid?
-      lfm = LastFMmp3.new(@source)
-      tempfile {|tmpfile|
-        open(tmpfile, "w") {|f| f.write lfm.media_io.read }
-        transcode(tmpfile)
-      }
-    end
+    lfm = LastFMmp3.new(@source)
+    tempfile {|tmpfile|
+      open(tmpfile, "w") {|f| f.write lfm.media_io.read }
+      transcode(tmpfile)
+    }
   end
 end
 
@@ -210,20 +204,16 @@ end
 
 class MP3Item < Item
   def process
-    if not valid?
-      tempfile {|tmpfile|
-        open(tmpfile, "w") {|f| f.write open(@source, "rb").read }
-        transcode(tmpfile)
-      }
-    end
+    tempfile {|tmpfile|
+      open(tmpfile, "w") {|f| f.write open(@source, "rb").read }
+      transcode(tmpfile)
+    }
   end
 end
 
 class OggItem < Item
   def process
-    if not valid?
-      open(@file, "wb") {|f| f.write open(@source, "rb").read }
-    end
+    open(@file, "wb") {|f| f.write open(@source, "rb").read }
   end
 end
 
@@ -239,17 +229,17 @@ class Playlist
       begin
         @items << Item.create(rss_item)
       rescue Item::UnknownSource => e
+        p e
         next
       end
     }
   end
   
   def process
-    @items.each_with_index do |item, index|
-      fork {item.process}
-      Process.wait if index >= 1
+    @items.each do |item|
+      next if item.valid? or item.disabled?
+      item.process
     end
-    Process.waitall
     @playlist = @items.select {|item| item.valid? }
     
     open("#{ROOT_FOLDER}/#{@subreddit}_#{@order}.m3u", "w") {|m3u| m3u.write to_m3u }
@@ -284,7 +274,7 @@ end
 FileUtils.mkdir_p ROOT_FOLDER
 
 names = []
-%w{listentothis }.each do |subreddit|
+%w{listentothis MainstreamMusic}.each do |subreddit|
   [SubReddit::NEW, SubReddit::TODAY, SubReddit::WEEK, SubReddit::MONTH, SubReddit::ALL].each {|url|
     puts url % subreddit
     items = Playlist.new(url % subreddit)
