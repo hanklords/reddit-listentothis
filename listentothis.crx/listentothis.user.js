@@ -85,7 +85,7 @@ function setPlayer(links) {
     $("div.link").removeClass("listening")
     var item = $("div.link:has(a[href='" + decodeURI(this.src) + "'])")
     item.addClass("listening")
-    $("div.playing").text("Playing: " + $("a.title", item).text())
+    $("div.playing").text("Playing: " + $(".listening a.title").text())
   })
 
   $(".previous").click(function() {audio.previous() })
