@@ -103,6 +103,7 @@ class Item
     @name  = rss_node.at('guid').content.split('/').last
     @url = "#{ROOT_SITE}/#@name.ogg"
     @file = "#{ROOT_FOLDER}/#@name.ogg"
+    @disable = "#{ROOT_FOLDER}/#@name.disable"
   end
 
   def process; true end
@@ -116,6 +117,9 @@ class Item
     end
   end
   def transcode(source); system(TRANSCODE % [source, @file], 2 => :close) end
+
+  def disable; FileUtils.touch @disable end
+  def disabled?; File.file? @disable end
 
   def to_m3u
     length = OggInfo.open(@file) {|ogg| ogg.length.to_i}
@@ -138,12 +142,14 @@ end
 class YoutubeItem < Item
   YOUTUBE_DL="youtube-dl".freeze
   def process
-    if not valid?
+    if not valid? and not disabled?
       puts @title
       
       tempfile {|tmpfile|
         if system(YOUTUBE_DL, "--max-quality=18", "--no-part", "-qo", tmpfile, @source, 2 => :close)
           transcode(tmpfile)
+        else
+          disable
         end
       }
     end
