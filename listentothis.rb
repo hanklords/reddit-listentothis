@@ -286,7 +286,7 @@ names = []
     names.concat items.names
   }
 end
-open("#{ROOT_FOLDER}/playlist.json", "w") {|json| json.write names.to_json }
+open("#{ROOT_FOLDER}/playlist.json", "w") {|json| json.write names.uniq.to_json }
 
 # Clean folder
 oggs = Dir.glob("#{ROOT_FOLDER}/*.ogg").each { |f|
