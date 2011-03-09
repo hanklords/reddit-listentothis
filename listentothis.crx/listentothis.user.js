@@ -31,7 +31,7 @@
 // @version        0.4
 // ==/UserScript==
 
-site =  "http://yieu.eu/listentothis/"
+site = "http://yieu.eu/listentothis/"
 
 function setPlayer(links) {
   var subreddit = $(".pagename").text()
@@ -59,28 +59,8 @@ function setPlayer(links) {
     </div>\
     </div></div>"
   )
-  var audio = $("audio")[0]
-  audio.playlist = links
-  audio.orig_play = audio.play
-  audio.play = function(src) {
-    this.src = src
-    this.load()
-    this.orig_play()
-  }
 
-  audio.previous = function() {
-    var current = $.inArray(decodeURI(this.src), this.playlist)
-    if(current == 0) { current = this.playlist.length }
-    this.play(this.playlist[current - 1])
-  }
-
-  audio.next = function() {
-    var current = $.inArray(decodeURI(this.src), this.playlist)
-    if(current == this.playlist.length - 1) { current = -1 }
-    this.play(this.playlist[current + 1])
-  }
-
-  $("audio").bind("ended", function() {$("audio")[0].next()})
+  $("audio").bind("ended", function() { next() })
   $("audio").bind("play", function() {
     $("div.link").removeClass("listening")
     var item = $("div.link:has(a[href='" + decodeURI(this.src) + "'])")
@@ -88,9 +68,35 @@ function setPlayer(links) {
     $("div.playing").text("Playing: " + $(".listening a.title").text())
   })
 
-  $(".previous").click(function() {$("audio")[0].previous() })
-  $(".next").click(function () {$("audio")[0].next() })
-  $(".previous, .next").click(function(event) {event.preventDefault()})
+  $(".previous").click(function(event) {
+    event.preventDefault()
+    previous()
+  })
+
+  $(".next").click(function (event) {
+    event.preventDefault()
+    next()
+ })
+}
+
+function previous() {
+  var playlist = $.map($("a.ogglink"), function(e) { return e.href })
+  var current = $.inArray(decodeURI($("audio")[0].src), playlist)
+  if(current == 0) { current = playlist.length }
+  play(playlist[current - 1])
+}
+
+function next() {
+  var playlist = $.map($("a.ogglink"), function(e) { return e.href })
+  var current = $.inArray(decodeURI($("audio")[0].src), playlist)
+  if(current == playlist.length - 1) { current = -1 }
+  play(playlist[current + 1])
+}
+
+function play(src) {
+  $("audio")[0].src = src
+  $("audio")[0].load()
+  $("audio")[0].play()
 }
 
 function load(known) {
@@ -109,7 +115,7 @@ function load(known) {
 
   if(links.length > 0) { setPlayer(links) }
   $("a.ogglink").click(function(event) {
-    $("audio")[0].play(this.href)
+    play(this.href)
     event.preventDefault()
   })
 }
