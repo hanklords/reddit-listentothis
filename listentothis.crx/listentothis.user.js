@@ -22,13 +22,13 @@
 // ==UserScript==
 // @name           listentothis
 // @include        http://www.reddit.com/r/listentothis*
-// @include        http://www.reddit.com/r/Music*
+// @include        http://www.reddit.com/r/MainstreamMusic*
 // @description    Render /r/listentothis into a playlist.
 // @icon           listentothis.png
 // @copyright      2009, Mael Clerambault <maelclerambault@yahoo.fr>
 // @require        jquery.js
 // @resource       css listentothis.css
-// @version        0.3
+// @version        0.4
 // ==/UserScript==
 
 site =  "http://yieu.eu/listentothis/"
