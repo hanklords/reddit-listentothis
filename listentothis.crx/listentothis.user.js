@@ -28,7 +28,7 @@
 // @copyright      2009, Mael Clerambault <maelclerambault@yahoo.fr>
 // @require        jquery.js
 // @resource       css listentothis.css
-// @version        0.4
+// @version        0.5
 // ==/UserScript==
 
 site = "http://yieu.eu/listentothis/"
