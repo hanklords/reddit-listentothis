@@ -14,7 +14,7 @@
     {
       "matches": [
         "http://www.reddit.com/r/listentothis*",
-        "http://www.reddit.com/r/MainstreamMusic*"
+        "http://www.reddit.com/r/MainstreamMusic*",
         "http://www.reddit.com/r/EcouteCa*"
       ],
       "css": ["listentothis.css"],
