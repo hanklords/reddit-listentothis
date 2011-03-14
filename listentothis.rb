@@ -277,7 +277,7 @@ end
 FileUtils.mkdir_p ROOT_FOLDER
 
 names = []
-%w{listentothis MainstreamMusic}.each do |subreddit|
+%w{listentothis MainstreamMusic EcouteCa}.each do |subreddit|
   [SubReddit::NEW, SubReddit::TODAY, SubReddit::WEEK, SubReddit::MONTH, SubReddit::ALL].each {|url|
     puts url % subreddit
     items = Playlist.new(url % subreddit)
