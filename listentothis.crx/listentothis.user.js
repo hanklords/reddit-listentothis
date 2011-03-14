@@ -23,6 +23,7 @@
 // @name           listentothis
 // @include        http://www.reddit.com/r/listentothis*
 // @include        http://www.reddit.com/r/MainstreamMusic*
+// @include        http://www.reddit.com/r/EcouteCa*
 // @description    Render /r/listentothis into a playlist.
 // @icon           listentothis.png
 // @copyright      2009, Mael Clerambault <maelclerambault@yahoo.fr>
