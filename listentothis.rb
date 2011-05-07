@@ -168,6 +168,8 @@ class SoundcloudItem < Item
       open(tmpfile, "w") {|f| f.write open(uri).read }
       transcode(tmpfile)
     }
+  rescue
+    disable
   end
 end
 
