@@ -86,8 +86,8 @@ class Item
         SoundcloudItem
       when /jamendo.com.*album/
         JamendoAlbumItem
-      when /last\.fm\//
-        LastFMItem
+#      when /last\.fm\//
+#        LastFMItem
       else
         raise UnknownSource.new(url)
     end
