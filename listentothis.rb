@@ -80,7 +80,7 @@ class Item
         OggItem
       when /\.mp3$/
         MP3Item
-      when /youtube.com/
+      when /youtube.com/, /youtu.be/
         YoutubeItem
       when /soundcloud.com/
         SoundcloudItem
