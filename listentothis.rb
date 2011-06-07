@@ -242,8 +242,12 @@ class Playlist
   
   def process
     @items.each do |item|
+    begin
       next if item.valid? or item.disabled?
       item.process
+    rescue
+      next
+    end
     end
     @playlist = @items.select {|item| item.valid? }
     
