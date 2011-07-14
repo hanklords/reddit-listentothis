@@ -82,14 +82,14 @@ function setPlayer(links) {
 
 function previous() {
   var playlist = $.map($("a.ogglink"), function(e) { return e.href })
-  var current = $.inArray(decodeURI($("audio")[0].src), playlist)
+  var current = $.inArray($("audio")[0].src, playlist)
   if(current == 0) { current = playlist.length }
   play(playlist[current - 1])
 }
 
 function next() {
   var playlist = $.map($("a.ogglink"), function(e) { return e.href })
-  var current = $.inArray(decodeURI($("audio")[0].src), playlist)
+  var current = $.inArray($("audio")[0].src, playlist)
   if(current == playlist.length - 1) { current = -1 }
   play(playlist[current + 1])
 }
