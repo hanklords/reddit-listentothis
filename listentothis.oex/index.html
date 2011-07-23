@@ -1,0 +1,8 @@
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript">
+  opera.extension.onmessage = function(event) {
+    $.getJSON(event.data, function(data) {
+      event.source.postMessage(data)
+    })
+  }
+</script>

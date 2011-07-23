@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" id="http://yieu.eu/listentothis/listentothis.oex" version="0.7">
+    <name>listentothis</name>
+    <description>Listen to listentothis</description>
+    <author href="http://github.com/hanklords/reddit-listentothis" email="mael@clerambault.fr">Maël Clérambault</author>
+    <icon src="icons/listentothis64.png"/>
+    <access origin="http://yieu.eu" />
+    <update-description href="http://yieu.eu/listentothis/update-oex.xml"/>
+</widget>
