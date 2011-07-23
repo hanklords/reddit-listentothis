@@ -38,6 +38,7 @@ FileUtils.touch(RUNFILE)
 ROOT_SITE="http://yieu.eu/listentothis"
 ROOT_FOLDER="#{ENV['HOME']}/www/listentothis"
 HISTORY_NUMBER=100
+SUBREDDITS=%w{listentothis listentomusic EcouteCa dubstep Metal}
 
 class LastFMmp3
   PL="http://ws.audioscrobbler.com/2.0/?method=playlist.fetch&api_key=da6ae1e99462ee22e81ac91ed39b43a4&playlistURL=lastfm://playlist/track/%s&streaming=true"
@@ -283,7 +284,7 @@ end
 FileUtils.mkdir_p ROOT_FOLDER
 
 names = []
-%w{listentothis listentomusic EcouteCa dubstep Metal}.each do |subreddit|
+SUBREDDITS.each do |subreddit|
   [SubReddit::NEW, SubReddit::TODAY, SubReddit::WEEK, SubReddit::MONTH, SubReddit::ALL].each {|url|
     puts url % subreddit
     items = Playlist.new(url % subreddit)
