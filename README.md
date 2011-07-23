@@ -1,7 +1,7 @@
 /r/listentothis
 ===============
 
-Use html <audio> tag to play the songs posted on <http://reddit.com/r/listentothis>
+Use html `<audio>` tag to play the songs posted on <http://reddit.com/r/listentothis>
 
 This the source code for the server side and the firefox (greasemonkey) and chrome plugins.
 
@@ -14,3 +14,8 @@ Chrome plugin
 -------------
 
 Install the [plugin](http://yieu.eu/listentothis/listentothis.crx).
+
+Opera plugin
+-------------
+
+Install the [plugin](http://yieu.eu/listentothis/listentothis.oex).
