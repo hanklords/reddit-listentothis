@@ -40,29 +40,6 @@ ROOT_FOLDER="#{ENV['HOME']}/www/listentothis"
 HISTORY_NUMBER=100
 SUBREDDITS=%w{listentothis listentomusic EcouteCa dubstep Metal}
 
-class LastFMmp3
-  PL="http://ws.audioscrobbler.com/2.0/?method=playlist.fetch&api_key=da6ae1e99462ee22e81ac91ed39b43a4&playlistURL=lastfm://playlist/track/%s&streaming=true"
-
-  attr_reader :id, :media_url, :cookie
-  def initialize(url)
-    lastfm_page = Nokogiri::HTML.parse(open(URI.parse(url)))
-    scripts = lastfm_page.search('script').text
-    @id = scripts[/"id":"?(\d+)"?/, 1]
-    playlist_url = PL % [@id]
-    r = Net::HTTP.get_response(URI.parse(playlist_url))
-    @cookie = r['Set-Cookie'][/AnonSession=([\w\d]+);/,1]
-    playlist = Nokogiri.parse(r.body)
-    @media_url = playlist.search('freeTrackURL', playlist.root.collect_namespaces).text
-    if @media_url.empty?
-      @media_url = playlist.search('location', playlist.root.collect_namespaces).text
-    end
-  end
-
-  def media_io
-    open(@media_url, "rb", {'Cookie' => "AnonSession=#@cookie;"})
-  end
-end
-
 class Item
   TRANSCODE=%w{ffmpeg -i -vn -acodec libvorbis -ab 128k -ac 2}.freeze
   class UnknownSource < StandardError; end
@@ -85,10 +62,6 @@ class Item
         YoutubeItem
       when /soundcloud.com/
         SoundcloudItem
-      when /jamendo.com.*album/
-        JamendoAlbumItem
-#      when /last\.fm\//
-#        LastFMItem
       else
         raise UnknownSource.new(url)
     end
@@ -171,40 +144,6 @@ class SoundcloudItem < Item
     }
   rescue
     disable
-  end
-end
-
-class LastFMItem < Item
-  def process
-    lfm = LastFMmp3.new(@source)
-    tempfile {|tmpfile|
-      open(tmpfile, "w") {|f| f.write lfm.media_io.read }
-      transcode(tmpfile)
-    }
-  end
-end
-
-class JamendoAlbumItem < Item
-  Plain="http://api.jamendo.com/get2/stream/track/plain/?album_id=%s&order=numalbum_asc"
-  def initialize(*args)
-    super(*args)
-    @id = @source[/album\/(\d+)/, 1]
-    @m3u_url = "http://api.jamendo.com/get2/stream/track/m3u/?album_id=#{@id}&order=numalbum_asc"
-  end
-
-  def to_m3u
-    open(@m3u_url).read.sub(/^#EXTM3U$/, '')
-  end
-
-  def to_rss
-    items = open(Plain % [@id]).readlines.collect {|line|
-      enclosure = Nokogiri::XML::Node.new('enclosure', rss.document)
-      enclosure['url'] = line
-      enclosure['type'] = "audio/mpeg"
-
-      @rss_node.dup << enclosure
-    }
-    Nokogiri::XML::NodeSet.new(rss.document, items)
   end
 end
 
