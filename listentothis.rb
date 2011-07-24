@@ -51,8 +51,10 @@ class Item
         OggItem
       when /\.mp3$/
         MP3Item
-      when /youtube.com/, /youtu.be/
+      when /youtube.com/
         YoutubeItem
+      when /youtu.be/
+        YoutubeShortItem
       when /soundcloud.com/
         SoundcloudItem
       else
@@ -108,6 +110,14 @@ class YoutubeItem < Item
         disable
       end
     }
+  end
+end
+
+class YoutubeShortItem < YoutubeItem
+  def process
+    r = Net::HTTP.get_response(URI.parse(@source))
+    @source = r["location"]
+    super
   end
 end
 
