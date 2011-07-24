@@ -35,6 +35,9 @@ RUNFILE="#{Dir.tmpdir}/#{ENV['LOGNAME']}_listentothis"
 exit if File.exist?(RUNFILE)
 FileUtils.touch(RUNFILE)
 
+$\="\n"
+$,=" "
+LOGFILE="#{ENV['HOME']}/.listentothis.rb.log"
 ROOT_SITE="http://yieu.eu/listentothis"
 ROOT_FOLDER="#{ENV['HOME']}/www/listentothis"
 HISTORY_NUMBER=100
@@ -42,17 +45,7 @@ SUBREDDITS=%w{listentothis listentomusic EcouteCa dubstep Metal}
 
 class Item
   TRANSCODE=%w{ffmpeg -i -vn -acodec libvorbis -ab 128k -ac 2}.freeze
-  class UnknownSource < StandardError; end
-  def self.create(rss_node)
-    content = rss_node.at('description').content
-    d = Nokogiri::HTML(CGI.unescapeHTML(content))
-    url = nil
-    d.search('a').each {|a|
-      next if not a.content == '[link]'
-      url = URI.escape(a['href'])
-      break
-    }
-
+  def self.create(url, title, name)
     klass = case url
       when /\.ogg$/
         OggItem
@@ -63,18 +56,15 @@ class Item
       when /soundcloud.com/
         SoundcloudItem
       else
-        raise UnknownSource.new(url)
+        UnknownSource
     end
 
-    klass.new(rss_node, url)
+    klass.new(url, title, name)
   end
 
-  attr_reader :name, :url, :source, :title
-  def initialize(rss_node, url)
-    @rss_node = rss_node
-    @source = url
-    @title = rss_node.at('title').content
-    @name  = rss_node.at('guid').content.split('/').last
+  attr_reader :source, :title, :name, :url
+  def initialize(source, title, name)
+    @source, @title, @name = source, title, name
     @url = "#{ROOT_SITE}/#@name.ogg"
     @file = "#{ROOT_FOLDER}/#@name.ogg"
     @disable = "#{ROOT_FOLDER}/#@name.disable"
@@ -104,11 +94,13 @@ class Item
   end
 end
 
+class UnknownSource < Item
+  def process; disable end
+end
+
 class YoutubeItem < Item
   YOUTUBE_DL=%w{youtube-dl --max-quality=18 --no-part -r 1m -q -o}.freeze
   def process
-    puts @title
-    
     tempfile {|tmpfile|
       if system(*YOUTUBE_DL, tmpfile, @source, 2 => :close)
         transcode(tmpfile)
@@ -152,72 +144,84 @@ end
 
 class Playlist
   attr_reader :subreddit, :order
-  def initialize(rss_file)
-    @playlist = []
+  def initialize(json_file)
     @items = []
-    path, @subreddit, @order = *rss_file.match(%r{/r/(\w+)/.*\?\w+=(\w+)})
+    path, @subreddit, @order = *json_file.match(%r{/r/(\w+)/.*\?\w+=(\w+)})
 
-    @doc = Nokogiri::XML(open(rss_file))
-    @doc.search('rss channel item').each { |rss_item|
-      begin
-        @items << Item.create(rss_item)
-      rescue Item::UnknownSource => e
-#        p e
-        next
-      end
+    @doc = JSON.parse(open(json_file).read)
+    @doc["data"]["children"].each {|entry|
+      entry = entry["data"]
+      url, title, name = entry["url"], entry["title"], entry["permalink"].split('/').last
+      @items << Item.create(url, title, name)
     }
   end
   
   def process
+    logfile = open(LOGFILE, "a")
+    begin_item = begin_subreddit = Time.now
+    processed = 0
+    logfile.print "subreddit:", @subreddit, @order
     @items.each do |item|
     begin
       next if item.valid? or item.disabled?
+      begin_item = Time.now
+      processed += 1
       item.process
+      status = (UnknownSource === item || item.disabled?) ? "Failed" : "OK"
+      logfile.print "item:", "%.0fs" % (Time.now - begin_item), item.name, item.source, item.class, status
     rescue
+      logfile.print "item:", "%.0fs" % (Time.now - begin_item), item.name, item.source, item.class, "Failed"
       next
     end
     end
-    @playlist = @items.select {|item| item.valid? }
     
+    logfile.print "summary:", "%.0fs" % (Time.now - begin_subreddit), processed
+    logfile.close
     open("#{ROOT_FOLDER}/#{@subreddit}_#{@order}.m3u", "w") {|m3u| m3u.write to_m3u }
   end
 
   def to_m3u
-    "#EXTM3U\n" + @playlist.collect {|i| i.to_m3u }.join
+    "#EXTM3U\n" + valid.collect {|i| i.to_m3u }.join
   end
 
-  def names; @playlist.map {|i| i.name} end
-  def to_a; @playlist end
+  def valid; @items.select {|item| item.valid? } end
+  def disabled; @items.select {|item| item.disabled? } end
+  def to_a; valid end
+end
+
+module SubReddit
+  NEW = "http://www.reddit.com/r/%s/new.json?sort=new&limit=#{HISTORY_NUMBER}".freeze
+  TODAY = "http://www.reddit.com/r/%s/top.json?t=day&limit=#{HISTORY_NUMBER}".freeze
+  WEEK = "http://www.reddit.com/r/%s/top.json?t=week&limit=#{HISTORY_NUMBER}".freeze
+  MONTH = "http://www.reddit.com/r/%s/top.json?t=month&limit=#{HISTORY_NUMBER}".freeze
+  ALL = "http://www.reddit.com/r/%s/top.json?t=all&limit=#{HISTORY_NUMBER}".freeze
 end
 
 begin
-
-module SubReddit
-  NEW = "http://www.reddit.com/r/%s/new.rss?sort=new&limit=#{HISTORY_NUMBER}".freeze
-  TODAY = "http://www.reddit.com/r/%s/top.rss?t=day&limit=#{HISTORY_NUMBER}".freeze
-  WEEK = "http://www.reddit.com/r/%s/top.rss?t=week&limit=#{HISTORY_NUMBER}".freeze
-  MONTH = "http://www.reddit.com/r/%s/top.rss?t=month&limit=#{HISTORY_NUMBER}".freeze
-  ALL = "http://www.reddit.com/r/%s/top.rss?t=all&limit=#{HISTORY_NUMBER}".freeze
-end
-
+begin_all = Time.now
+open(LOGFILE, "a") {|logfile| logfile.print "begin:", begin_all}
 FileUtils.mkdir_p ROOT_FOLDER
 
-names = []
+valid, disabled = [], []
 SUBREDDITS.each do |subreddit|
   [SubReddit::NEW, SubReddit::TODAY, SubReddit::WEEK, SubReddit::MONTH, SubReddit::ALL].each {|url|
-    puts url % subreddit
     items = Playlist.new(url % subreddit)
     items.process
-    names.concat items.names
+    valid.concat items.valid.map {|i| i.name}
+    disabled.concat items.disabled.map {|i| i.name}
   }
 end
-open("#{ROOT_FOLDER}/playlist.json", "w") {|json| json.write names.uniq.to_json }
+open("#{ROOT_FOLDER}/playlist.json", "w") {|json| json.write valid.uniq.to_json }
 
 # Clean folder
-oggs = Dir.glob("#{ROOT_FOLDER}/*.ogg").each { |f|
-  FileUtils.rm f ,:force => true if not names.include? File.basename(f, '.ogg')
+Dir.glob("#{ROOT_FOLDER}/*.ogg").each { |f|
+  FileUtils.rm f ,:force => true if not valid.include? File.basename(f, '.ogg')
+}
+Dir.glob("#{ROOT_FOLDER}/*.disable").each { |f|
+  FileUtils.rm f ,:force => true if not disabled.include? File.basename(f, '.disable')
 }
 
 ensure
+  open(LOGFILE, "a") {|logfile| logfile.print "end:", "%.0fs" % (Time.now - begin_all)}
   FileUtils.rm  RUNFILE,:force => true
 end
