@@ -117,7 +117,7 @@ class Item
 end
 
 class YoutubeItem < Item
-  YOUTUBE_DL=%w{youtube-dl --max-quality=18 --no-part -r 500k -q -o}.freeze
+  YOUTUBE_DL=%w{youtube-dl --max-quality=18 --no-part -r 1m -q -o}.freeze
   def process
     puts @title
     
