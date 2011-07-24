@@ -97,7 +97,8 @@ class Item
 end
 
 class UnknownSource < Item
-  def process; disable end
+  def valid?; false end
+  def disabled?; true end
 end
 
 class YoutubeItem < Item
@@ -153,7 +154,7 @@ class OggItem < Item
 end
 
 class Playlist
-  attr_reader :subreddit, :order
+  attr_reader :subreddit, :order, :valid, :disabled
   def initialize(json_file)
     @items = []
     path, @subreddit, @order = *json_file.match(%r{/r/(\w+)/.*\?\w+=(\w+)})
@@ -185,17 +186,18 @@ class Playlist
     end
     end
     
+    @valid = @items.select {|item| item.valid? }
+    @disabled = @items.select {|item| item.disabled? }
+    open("#{ROOT_FOLDER}/#{@subreddit}_#{@order}.m3u", "w") {|m3u| m3u.write to_m3u }
+    
     logfile.print "summary:", "%.0fs" % (Time.now - begin_subreddit), processed
     logfile.close
-    open("#{ROOT_FOLDER}/#{@subreddit}_#{@order}.m3u", "w") {|m3u| m3u.write to_m3u }
   end
 
   def to_m3u
-    "#EXTM3U\n" + valid.collect {|i| i.to_m3u }.join
+    "#EXTM3U\n" + @valid.collect {|i| i.to_m3u }.join
   end
 
-  def valid; @items.select {|item| item.valid? } end
-  def disabled; @items.select {|item| item.disabled? } end
   def to_a; valid end
 end
 
