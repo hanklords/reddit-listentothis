@@ -102,18 +102,6 @@ class Item
     length = OggInfo.open(@file) {|ogg| ogg.length.to_i}
     "#EXTINF:#{length},#@title\n#@url\n"
   end
-
-  def to_rss
-    rss = @rss_node.dup
-    rss.at('pubDate').content = Time.parse(rss.at('pubDate').content).rfc822
-    rss.at('guid').content = @url
-    enclosure = Nokogiri::XML::Node.new('enclosure', rss.document)
-    enclosure['url'] = @url
-    enclosure['type'] = "audio/ogg"
-    enclosure['length'] = File.size(@file).to_s
-    rss << enclosure
-    rss
-  end
 end
 
 class YoutubeItem < Item
@@ -192,18 +180,10 @@ class Playlist
     @playlist = @items.select {|item| item.valid? }
     
     open("#{ROOT_FOLDER}/#{@subreddit}_#{@order}.m3u", "w") {|m3u| m3u.write to_m3u }
-    open("#{ROOT_FOLDER}/#{@subreddit}_#{@order}.rss", "w") {|rss| rss.write to_rss }
   end
 
   def to_m3u
     "#EXTM3U\n" + @playlist.collect {|i| i.to_m3u }.join
-  end
-
-  def to_rss
-    rss = @doc.dup
-    rss.search('item').each {|rss_item| rss_item.remove }
-    @playlist.each {|i| rss.at('channel') << i.to_rss  }
-    rss.to_s
   end
 
   def names; @playlist.map {|i| i.name} end
