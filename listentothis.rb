@@ -222,6 +222,6 @@ Dir.glob("#{ROOT_FOLDER}/*.disable").each { |f|
 }
 
 ensure
-  open(LOGFILE, "a") {|logfile| logfile.print "end:", "%.0fs" % (Time.now - begin_all)}
+  open(LOGFILE, "a") {|logfile| logfile.print "end:", "%.0fs" % (Time.now - begin_all); logfile.print}
   FileUtils.rm  RUNFILE,:force => true
 end
