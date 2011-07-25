@@ -159,7 +159,7 @@ module ListenToThis
     attr_reader :subreddit, :order, :valid, :disabled
     def initialize(json_file)
       @items = []
-      path, @subreddit, @order = *json_file.match(%r{/r/(\w+)/.*\?\w+=(\w+)})
+      path, @subreddit, @page, @order = *json_file.match(%r{/r/(\w+)/(\w+)\..*\?\w+=(\w+)})
 
       @doc = JSON.parse(open(json_file).read)
       @doc["data"]["children"].each {|entry|
@@ -172,7 +172,7 @@ module ListenToThis
     def process
       begin_item = begin_subreddit = Time.now
       processed = 0
-      ListenToThis.log "subreddit:", @subreddit, @order
+      ListenToThis.log "subreddit:", @subreddit, @page, @order
       @items.each do |item|
       begin
         next if item.valid? or item.disabled?
