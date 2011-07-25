@@ -216,7 +216,6 @@ module ListenToThis
   end
   
   def self.do_work
-    exit if File.exist?(RUNFILE)
     FileUtils.touch(RUNFILE)
     
     ListenToThis.log "begin:", @begin_all
@@ -250,4 +249,5 @@ module ListenToThis
 end
 
 
+exit if File.exist?(RUNFILE)
 ListenToThis.do_work
