@@ -47,7 +47,7 @@ module ListenToThis
 
   class Item
     TRANSCODE=%w{ffmpeg -i -vn -acodec libvorbis -ab 128k -ac 2}.freeze
-    def self.create(url, title, name, file_oggs, file_disableds)
+    def self.create(url, title, name)
       klass = case url
         when /\.ogg$/
           OggItem
@@ -63,16 +63,15 @@ module ListenToThis
           UnknownSource
       end
 
-      klass.new(url, title, name, file_oggs, file_disableds)
+      klass.new(url, title, name)
     end
 
     attr_reader :source, :title, :name, :url
-    def initialize(source, title, name, file_oggs, file_disableds)
+    def initialize(source, title, name)
       @source, @title, @name = source, title, name
       @url = "#{ROOT_SITE}/#@name.ogg"
       @file = "#{ROOT_FOLDER}/#@name.ogg"
       @disable = "#{ROOT_FOLDER}/#@name.disable"
-      @file_oggs, @file_disableds = file_oggs, file_disableds
     end
 
 
@@ -91,8 +90,8 @@ module ListenToThis
 
     def process; true end
     def disable; FileUtils.touch @disable end
-    def disabled?; @file_disableds.include? @name end
-    def valid?; @file_oggs.include? @name end
+    def disabled?; File.exist? @disable end
+    def valid?; File.exist? @file end
 
     def to_m3u
       length = Vorbis::Info.open(@file) {|v| v.duration.to_i}
@@ -158,7 +157,7 @@ module ListenToThis
 
   class Playlist
     attr_reader :subreddit, :order, :valid, :disabled
-    def initialize(json_file, file_oggs, file_disableds)
+    def initialize(json_file)
       @items = []
       path, @subreddit, @order = *json_file.match(%r{/r/(\w+)/.*\?\w+=(\w+)})
 
@@ -166,7 +165,7 @@ module ListenToThis
       @doc["data"]["children"].each {|entry|
         entry = entry["data"]
         url, title, name = entry["url"], entry["title"], entry["permalink"].split('/').last
-        @items << Item.create(url, title, name, file_oggs, file_disableds)
+        @items << Item.create(url, title, name)
       }
     end
     
@@ -220,13 +219,11 @@ module ListenToThis
     
     ListenToThis.log "begin:", @begin_all
     FileUtils.mkdir_p ROOT_FOLDER
-    file_oggs = Dir.glob("#{ROOT_FOLDER}/*.ogg").map { |f| File.basename(f, '.ogg') }
-    file_disableds = Dir.glob("#{ROOT_FOLDER}/*.disable").map { |f| File.basename(f, '.disable') }
 
     valid, disabled = [], []
     SUBREDDITS.each do |subreddit|
       SubPages.each {|url|
-        items = Playlist.new(url % [subreddit, HISTORY_NUMBER], file_oggs, file_disableds)
+        items = Playlist.new(url % [subreddit, HISTORY_NUMBER])
         items.process
         valid.concat items.valid.map {|i| i.name}
         disabled.concat items.disabled.map {|i| i.name}
